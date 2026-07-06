@@ -142,6 +142,7 @@ appending new ones as later ingestion runs add them.
 npm run ingest:history:recent      # /history for the 5 most recently active wallets
 npm run ingest:positions:recent    # /positions for the 5 most recently active wallets
 npm run ingest:rankings            # /leaderboards (all 3 periods) + /profiles for the top 20 wallets
+npm run analytics:scores           # compute + persist Smart Score snapshots (default 500 candidate wallets, no Jupiter calls)
 ```
 
 **All four steps in one command:**
@@ -181,13 +182,14 @@ its own — `ingest:trades:poll`'s own default is 5 iterations and
 
 Base URL: `http://localhost:4100` (or `$PORT`).
 
-| Endpoint                                               | Notes                                                                                                       |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `GET /health`                                          | `{ ok, uptimeSeconds, db, dbError }` — real `SELECT 1` check.                                               |
-| `GET /api/trades/recent?limit=&marketId=&ownerPubkey=` | `limit` default 50, max 200.                                                                                |
-| `GET /api/trades/stream?limit=&marketId=&ownerPubkey=` | SSE: `snapshot` on connect, `trade` per new row (5s poll), `heartbeat` every 25s.                           |
-| `GET /api/wallets/:walletPubkey`                       | Profile + positions + recent trades + recent history in one call; unknown wallet → 200 with nulls, not 404. |
-| `GET /api/leaderboards/latest?period=`                 | `period`: `all_time` (default) \| `weekly` \| `monthly`.                                                    |
+| Endpoint                                               | Notes                                                                                                                                                        |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /health`                                          | `{ ok, uptimeSeconds, db, dbError }` — real `SELECT 1` check.                                                                                                |
+| `GET /api/trades/recent?limit=&marketId=&ownerPubkey=` | `limit` default 50, max 200.                                                                                                                                 |
+| `GET /api/trades/stream?limit=&marketId=&ownerPubkey=` | SSE: `snapshot` on connect, `trade` per new row (5s poll), `heartbeat` every 25s.                                                                            |
+| `GET /api/wallets/:walletPubkey`                       | Profile + positions + recent trades + recent history + `latestSmartScore` in one call; unknown wallet → 200 with nulls, not 404.                             |
+| `GET /api/leaderboards/latest?period=`                 | `period`: `all_time` (default) \| `weekly` \| `monthly`.                                                                                                     |
+| `GET /api/scores/latest?limit=&tier=&minScore=`        | Most recent persisted Smart Score snapshot bucket, sorted by score desc. `limit` default 50, max 200. See [`docs/smart-score.md`](./docs/smart-score.md) §6. |
 
 All read-only against Postgres; none of them call Jupiter or trigger
 ingestion.

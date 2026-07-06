@@ -1,6 +1,6 @@
 # VictoryLabs Smart Score
 
-Phase 3.2. The first ranking heuristic in VictoryLabs Trade — a
+Phase 3.2/3.3. The first ranking heuristic in VictoryLabs Trade — a
 conservative 0-100 score over a wallet's `WalletStats`
 (`src/backend/analytics/walletStats/computeWalletStats.ts`, Phase 3.1),
 computed by `src/backend/analytics/scoring/computeWalletScore.ts`. This
@@ -152,12 +152,117 @@ we've observed losing money or trading too little to trust.
   contrarian bet (bought at $0.10, resolved YES) higher than a correct
   favorite bet (bought at $0.95, resolved YES), since both currently look
   identical to `realizedPnlUsd`.
-- **Persisted score history** (this phase does not write to the
-  database at all) — once scores are computed on a schedule, storing them
-  would let `recency`/`consistency` be judged against the wallet's *own*
-  trend over time, not just a single snapshot.
+- **Trend-aware recency/consistency**, now that Phase 3.3 persists a
+  snapshot history — `recency`/`consistency` could be judged against a
+  wallet's *own* trend over time (`getWalletScoreHistory`), not just the
+  single snapshot `computeWalletScore` currently sees.
 - **Percentile-based tiers**, once there's a large enough scored
   population that relative ranking is more meaningful than fixed
   absolute thresholds.
 - **Feed this into `src/backend/analytics/marketStats/`** once it
   exists, to also account for which markets a wallet's edge shows up in.
+
+## 6. Persistence and API (Phase 3.3)
+
+Phase 3.2 only computed scores in-memory (`npm run analytics:leaderboard`,
+print-only, no database write). Phase 3.3 adds a persisted, queryable
+snapshot history on top of the same `computeWalletScore`/
+`computeWalletStats` — no change to the scoring formula itself.
+
+### 6.1 Schema
+
+`wallet_score_snapshots` (`src/backend/db/migrations/003_wallet_score_snapshots.sql`)
+is a genuine time series, one row per `(wallet_pubkey, snapshot_at)` —
+same shape of design as `leaderboard_snapshots` (see `001_init.sql`): the
+whole point of tracking scores on a schedule is watching them change, not
+just holding the latest.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `BIGSERIAL PRIMARY KEY` | Surrogate key — no natural upstream id for a score. |
+| `wallet_pubkey` | `TEXT NOT NULL` | |
+| `snapshot_at` | `TIMESTAMPTZ NOT NULL` | Floored to a 5-minute bucket before insert — see §6.2. |
+| `score` | `INTEGER NOT NULL` | `WalletScore.score`, 0-100, already gated. |
+| `tier` | `TEXT NOT NULL` (`CHECK` enum) | `WalletScore.tier`. |
+| `profitability`, `consistency`, `activity`, `recency`, `sample_size` | `INTEGER NOT NULL` each | `WalletScore.components.*`, each 0-100, pre-gate. |
+| `explanation` | `JSONB NOT NULL` | `WalletScore.explanations` (string array) verbatim. |
+| `stats` | `JSONB NOT NULL` | The full `WalletStats` object the score was computed from — the input, not just the output, is kept so a stored score is fully explainable later without re-deriving it. |
+| `inserted_at` | `TIMESTAMPTZ NOT NULL DEFAULT now()` | Row-write bookkeeping, distinct from `snapshot_at`'s bucketed logical time. |
+
+`UNIQUE (wallet_pubkey, snapshot_at)` is the idempotency mechanism (§6.2).
+Indexed on `snapshot_at DESC`, `score DESC`, `tier`, and `wallet_pubkey`
+for the read paths in §6.4/§6.5.
+
+### 6.2 The scoring job
+
+`src/backend/jobs/computeWalletScores.ts` (`npm run analytics:scores`,
+optionally `-- --max=<n>`, default 500 candidate wallets):
+
+1. Gathers candidate wallets the same way `analytics:leaderboard` does
+   (`gatherCandidateWallets`), capped at `max`.
+2. Floors `snapshotAt` to a 5-minute bucket (`SNAPSHOT_BUCKET_MS`, same
+   `floorToBucket` helper `ingestLeaderboards.ts` already uses) **once**,
+   up front — every wallet scored in one run shares the same bucket.
+3. Computes `WalletStats` + `WalletScore` per wallet sequentially (not
+   `Promise.all`-ed, same pool-sizing reasoning as
+   `analytics:leaderboard`).
+4. Bulk-inserts one row per wallet via
+   `insertWalletScoreSnapshots` (`ON CONFLICT (wallet_pubkey, snapshot_at)
+   DO NOTHING`).
+
+Re-running the job inside the same 5-minute window is therefore a no-op:
+every row collides with one already written for that bucket and is
+silently skipped, not duplicated. Verified live (Phase 3.3): two
+back-to-back runs against the same throwaway database scored 259
+candidate wallets both times; the first inserted 259 new rows, the
+second inserted 0 (259 reported as duplicates).
+
+Like every other analytics job in this project, it makes zero Jupiter API
+calls (pure read of already-ingested Postgres data) and runs exactly
+once per invocation — no loop, no daemon, no PM2.
+
+### 6.3 Repository
+
+`src/backend/db/repositories/walletScoresRepository.ts`:
+
+- `insertWalletScoreSnapshots(inputs)` — bulk insert, `ON CONFLICT DO
+  NOTHING`, returns the count of genuinely new rows.
+- `getLatestWalletScores({ limit, tier, minScore })` — finds the most
+  recent `snapshot_at` bucket across all wallets, optionally filters
+  within it, orders by `score DESC`.
+- `getWalletScoreHistory(walletPubkey)` — full snapshot history for one
+  wallet, newest first; `[0]` is also how the wallet-detail route below
+  gets "latest".
+
+### 6.4 `GET /api/scores/latest`
+
+Read-only, backed by `getLatestWalletScores` — never computes a score
+live. Query params:
+
+| Param | Default | Notes |
+|---|---|---|
+| `limit` | 50 | Max 200, same convention as `/api/trades/recent`. |
+| `tier` | — | One of `elite`/`strong`/`watch`/`weak`/`unknown`; `400 invalid_tier` otherwise. |
+| `minScore` | — | Any finite number; `400 invalid_min_score` otherwise. |
+
+Response: `{ snapshotAt, rows: [...] }`, each row shaped like
+`WalletScore` plus `walletPubkey`/`snapshotAt`/`stats`. `snapshotAt` is
+`null` and `rows` is `[]` if `analytics:scores` has never been run.
+
+### 6.5 `GET /api/wallets/:walletPubkey`
+
+Now also returns `latestSmartScore` — the same shape as one row above, or
+`null` if this wallet has never been scored (not an error; consistent
+with this route's existing "unknown wallet → 200 with nulls" behavior).
+Implemented as `(await getWalletScoreHistory(walletPubkey))[0] ?? null`,
+run in the same `Promise.all` as the route's other four lookups.
+
+### 6.6 What Phase 3.3 does not do
+
+- No scheduler — `analytics:scores` is a bounded, manually-invoked CLI
+  job, same constraint as every ingestion job in this project (see
+  `docs/mvp-status.md`).
+- No pruning/retention policy on `wallet_score_snapshots` — it grows by
+  (candidate wallets × runs) forever; not addressed here.
+- No new frontend surface — `/api/scores/latest` and
+  `latestSmartScore` are backend-only per this phase's brief.

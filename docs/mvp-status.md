@@ -8,9 +8,10 @@ actually built and running today, not what's planned.
 
 ## What works now
 
-**Database** (`src/backend/db/migrations/001_init.sql`, `002_history_events.sql`)
-- 7 tables: `markets`, `trades`, `wallets`, `wallet_profiles`, `positions`,
-  `leaderboard_snapshots`, `ingestion_runs`, plus `history_events`.
+**Database** (`src/backend/db/migrations/001_init.sql`, `002_history_events.sql`, `003_wallet_score_snapshots.sql`)
+- 8 tables: `markets`, `trades`, `wallets`, `wallet_profiles`, `positions`,
+  `leaderboard_snapshots`, `ingestion_runs`, `history_events`, plus
+  `wallet_score_snapshots` (Phase 3.3).
 - Plain-SQL migration runner (`npm run db:migrate`), idempotent,
   tracked in a `schema_migrations` table.
 - Money/contract fields are unconstrained `NUMERIC`, never `BIGINT`/`FLOAT`
@@ -51,8 +52,18 @@ actually built and running today, not what's planned.
   + recent history in one call.
 - `GET /api/leaderboards/latest` — most recent ingested snapshot bucket
   for a period (`all_time` default, `weekly`, `monthly`).
+- `GET /api/scores/latest` — most recent persisted Smart Score snapshot
+  bucket, filterable by `tier`/`minScore` (Phase 3.3).
 - Read-only: never calls Jupiter, never triggers ingestion. CORS is
   wide open (no auth anywhere in this project yet).
+
+**Smart Score** (`src/backend/analytics/scoring/`, `docs/smart-score.md`)
+- `computeWalletScore` — conservative 0-100 ranking heuristic, gated on
+  sample size and realized losses (Phase 3.2).
+- `npm run analytics:scores` (Phase 3.3) persists a snapshot per
+  candidate wallet into `wallet_score_snapshots`, bucketed to 5 minutes
+  and idempotent within a bucket; served via `/api/scores/latest` and
+  `/api/wallets/:walletPubkey`'s `latestSmartScore` field.
 
 **Frontend** (`src/frontend/`, Next.js App Router, `npm run frontend:dev`)
 - One page: a live trade feed consuming `/api/trades/stream` directly
@@ -66,9 +77,10 @@ actually built and running today, not what's planned.
 - **Only one frontend page.** The backend already supports wallet detail
   and leaderboard data (`/api/wallets/:walletPubkey`,
   `/api/leaderboards/latest`) but no frontend page renders either yet.
-- **No smart-money scoring/derivation.** Nothing thresholds or ranks
-  wallets by "is this smart money" — the leaderboard/profile data is
-  ingested and served as-is, exactly as Jupiter computed it.
+- **Smart Score has no frontend page.** `computeWalletScore` and its
+  persisted history (`/api/scores/latest`, `latestSmartScore` on
+  `/api/wallets/:walletPubkey`) exist, but no UI renders either yet —
+  same gap as leaderboard/wallet-detail pages above.
 - **No scheduled/always-on ingestion.** Every ingestion job is a bounded,
   manually-invoked run (or a bounded poll with a hard iteration cap). There
   is no cron, systemd timer, or in-repo scheduler keeping the database
