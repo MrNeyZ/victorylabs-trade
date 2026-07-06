@@ -8,13 +8,23 @@
 import { getPool } from '../client.js';
 import type { IngestionRunStatus } from '../../types/domain.js';
 
-export async function startIngestionRun(endpoint: string): Promise<number> {
+/**
+ * @param metadata Free-form context for this run (e.g. `{ ownerPubkey }`
+ *   for a wallet-scoped history run) — stored in `ingestion_runs.metadata`.
+ *   The `endpoint` column stays the fixed upstream-endpoint name
+ *   ('trades' | 'history' | ...); per-invocation detail like which wallet
+ *   was targeted belongs in `metadata`, not folded into `endpoint`.
+ */
+export async function startIngestionRun(
+  endpoint: string,
+  metadata?: Record<string, unknown>,
+): Promise<number> {
   const pool = getPool();
   const result = await pool.query<{ id: number }>(
-    `INSERT INTO ingestion_runs (endpoint, started_at, status)
-     VALUES ($1, now(), 'running')
+    `INSERT INTO ingestion_runs (endpoint, started_at, status, metadata)
+     VALUES ($1, now(), 'running', $2)
      RETURNING id`,
-    [endpoint],
+    [endpoint, metadata ? JSON.stringify(metadata) : null],
   );
   const id = result.rows[0]?.id;
   if (id === undefined) {

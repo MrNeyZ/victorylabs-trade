@@ -4,3 +4,4 @@
 export * from './client.js';
 export * from './repositories/tradesRepository.js';
 export * from './repositories/ingestionRunsRepository.js';
+export * from './repositories/historyRepository.js';

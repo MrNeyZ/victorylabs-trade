@@ -173,11 +173,24 @@ export interface JupiterHistoryEventV1 {
   grossProceedsUsd: string;
   netProceedsUsd: string;
   transferAmountToken: string | null;
-  realizedPnl: string;
-  realizedPnlBeforeFees: string;
+  /**
+   * Nullable per the OpenAPI spec AND confirmed live (2026-07-06 probe
+   * against a real wallet, 6/8 sampled rows had `null` here) — the
+   * original Phase 2.1 typing had this as non-nullable `string`, which was
+   * wrong. Only populated once a fill/settlement has actually occurred.
+   */
+  realizedPnl: string | null;
+  realizedPnlBeforeFees: string | null;
   payoutAmountUsd: string;
   eventId: string;
   marketMetadata?: JupiterMarketMetadata;
+  /**
+   * Present on every live-observed row (order and position events alike)
+   * despite not being documented in Phase 2.1's original typing — added
+   * after a live re-check for Phase 2.4. Optional here anyway since it's
+   * unconfirmed for `ticket_*` event types (never observed live).
+   */
+  eventMetadata?: JupiterEventMetadata;
 }
 
 export interface JupiterPagination {

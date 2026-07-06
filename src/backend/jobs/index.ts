@@ -1,6 +1,6 @@
 // Scheduled/background jobs.
-// ingestTradesOnce.ts and pollTrades.ts here are CLI entry points
-// (npm run ingest:trades:once / npm run ingest:trades:poll) that run
-// immediately on import — intentionally NOT re-exported from this barrel,
-// same reason src/backend/db/index.ts excludes migrate.ts.
+// Every file in this directory (ingestTradesOnce.ts, pollTrades.ts,
+// ingestRecentWalletHistory.ts) is a CLI entry point that runs immediately
+// on import — intentionally NOT re-exported from this barrel, same reason
+// src/backend/db/index.ts excludes migrate.ts.
 export {};

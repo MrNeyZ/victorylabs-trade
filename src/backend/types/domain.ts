@@ -54,6 +54,31 @@ export interface Trade {
   observedAt: Date;
 }
 
+/**
+ * Wallet-scoped history event, normalized from `GET /history` (v1).
+ * Deliberately narrower than the full ~35-property upstream shape — see
+ * `src/backend/db/migrations/002_history_events.sql` for why, and
+ * `src/backend/core/normalizeHistoryEvent.ts` for the exact field mapping
+ * (`action`/`side` are derived from upstream booleans; there is no
+ * upstream string field for either).
+ */
+export interface HistoryEvent {
+  /** Upstream `HistoryEvent.id` (a number upstream), stringified. */
+  id: string;
+  ownerPubkey: string;
+  marketId: string | null;
+  positionPubkey: string | null;
+  action: TradeAction | null;
+  side: TradeSide | null;
+  eventTitle: string | null;
+  upstreamTimestamp: Date | null;
+  amountUsd: string | null;
+  price: string | null;
+  realizedPnlUsd: string | null;
+  transactionSignature: string | null;
+  observedAt: Date;
+}
+
 export interface Market {
   marketId: string;
   eventId: string | null;
