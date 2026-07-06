@@ -351,7 +351,10 @@ in production only (§13) — local dev never uses it.
 (`nft-live-feed`, `wallet-checker`) — same PM2 daemon, same nginx
 instance, same Cloudflare Origin certificate — but its own checkout, own
 Postgres role/database, own PM2 processes, and own nginx site file, so it
-can be redeployed/restarted/rolled back without touching theirs.
+can be redeployed/restarted/rolled back without touching theirs. For
+day-to-day health checks, PM2/nginx/log commands, and what to do if the
+frontend, backend, or database goes down, see
+[`docs/monitoring.md`](./docs/monitoring.md).
 
 |               |                                                                                                                                                                                                |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
