@@ -5,7 +5,7 @@
  * `snapshotAt` (`../../ingestion/ingestLeaderboards.ts`).
  */
 import { getPool } from '../client.js';
-import type { LeaderboardSnapshot } from '../../types/domain.js';
+import type { LeaderboardPeriod, LeaderboardSnapshot } from '../../types/domain.js';
 import type { JupiterLeaderboardEntry } from '../../types/jupiter.js';
 
 export interface LeaderboardSnapshotUpsertInput {
@@ -89,4 +89,72 @@ export async function countLeaderboardSnapshots(): Promise<number> {
     'SELECT COUNT(*)::text AS count FROM leaderboard_snapshots',
   );
   return Number(result.rows[0]?.count ?? '0');
+}
+
+interface LeaderboardSnapshotRow {
+  wallet_pubkey: string;
+  period: LeaderboardPeriod;
+  rank: number | null;
+  realized_pnl_usd: string;
+  total_volume_usd: string;
+  predictions_count: number;
+  correct_predictions: number;
+  wrong_predictions: number;
+  win_rate_pct: string;
+  period_start: Date | null;
+  period_end: Date | null;
+  snapshot_at: Date;
+}
+
+function rowToLeaderboardSnapshot(row: LeaderboardSnapshotRow): LeaderboardSnapshot {
+  return {
+    walletPubkey: row.wallet_pubkey,
+    period: row.period,
+    rank: row.rank,
+    realizedPnlUsd: row.realized_pnl_usd,
+    totalVolumeUsd: row.total_volume_usd,
+    predictionsCount: row.predictions_count,
+    correctPredictions: row.correct_predictions,
+    wrongPredictions: row.wrong_predictions,
+    winRatePct: row.win_rate_pct,
+    periodStart: row.period_start,
+    periodEnd: row.period_end,
+    snapshotAt: row.snapshot_at,
+  };
+}
+
+export interface LatestLeaderboardSnapshotResult {
+  period: LeaderboardPeriod;
+  /** `null` when no snapshot has ever been ingested for this period. */
+  snapshotAt: Date | null;
+  rows: LeaderboardSnapshot[];
+}
+
+/**
+ * Read path for the API layer (`GET /api/leaderboards/latest`). Finds the
+ * most recent `snapshot_at` bucket for the given period (via a subquery,
+ * backed by `idx_leaderboard_snapshots_period_snapshot_at`) and returns
+ * every row in that bucket, ordered by rank.
+ */
+export async function getLatestLeaderboardSnapshot(
+  period: LeaderboardPeriod,
+): Promise<LatestLeaderboardSnapshotResult> {
+  const pool = getPool();
+  const result = await pool.query<LeaderboardSnapshotRow>(
+    `SELECT wallet_pubkey, period, rank, realized_pnl_usd, total_volume_usd, predictions_count,
+            correct_predictions, wrong_predictions, win_rate_pct, period_start, period_end, snapshot_at
+     FROM leaderboard_snapshots
+     WHERE period = $1 AND snapshot_at = (
+       SELECT MAX(snapshot_at) FROM leaderboard_snapshots WHERE period = $1
+     )
+     ORDER BY rank ASC NULLS LAST`,
+    [period],
+  );
+
+  const rows = result.rows.map(rowToLeaderboardSnapshot);
+  return {
+    period,
+    snapshotAt: rows[0]?.snapshotAt ?? null,
+    rows,
+  };
 }

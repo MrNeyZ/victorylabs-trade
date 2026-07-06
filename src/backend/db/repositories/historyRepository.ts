@@ -102,3 +102,55 @@ export async function getLatestHistoryTimestamp(ownerPubkey: string): Promise<Da
   );
   return result.rows[0]?.upstream_timestamp ?? null;
 }
+
+interface HistoryEventRow {
+  id: string;
+  owner_pubkey: string;
+  market_id: string | null;
+  position_pubkey: string | null;
+  action: 'buy' | 'sell' | null;
+  side: 'yes' | 'no' | null;
+  event_title: string | null;
+  upstream_timestamp: Date | null;
+  amount_usd: string | null;
+  price: string | null;
+  realized_pnl_usd: string | null;
+  transaction_signature: string | null;
+  observed_at: Date;
+}
+
+function rowToHistoryEvent(row: HistoryEventRow): HistoryEvent {
+  return {
+    id: row.id,
+    ownerPubkey: row.owner_pubkey,
+    marketId: row.market_id,
+    positionPubkey: row.position_pubkey,
+    action: row.action,
+    side: row.side,
+    eventTitle: row.event_title,
+    upstreamTimestamp: row.upstream_timestamp,
+    amountUsd: row.amount_usd,
+    price: row.price,
+    realizedPnlUsd: row.realized_pnl_usd,
+    transactionSignature: row.transaction_signature,
+    observedAt: row.observed_at,
+  };
+}
+
+/** Read path for the API layer (`GET /api/wallets/:walletPubkey`) — most-recent-first by upstream timestamp. */
+export async function getRecentHistoryForWallet(
+  ownerPubkey: string,
+  limit = 50,
+): Promise<HistoryEvent[]> {
+  const pool = getPool();
+  const result = await pool.query<HistoryEventRow>(
+    `SELECT id, owner_pubkey, market_id, position_pubkey, action, side, event_title,
+            upstream_timestamp, amount_usd, price, realized_pnl_usd, transaction_signature, observed_at
+     FROM history_events
+     WHERE owner_pubkey = $1
+     ORDER BY upstream_timestamp DESC NULLS LAST
+     LIMIT $2`,
+    [ownerPubkey, limit],
+  );
+  return result.rows.map(rowToHistoryEvent);
+}

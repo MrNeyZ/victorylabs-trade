@@ -129,3 +129,77 @@ export async function getRecentActiveWallets(
   );
   return result.rows.map((row) => row.owner_pubkey);
 }
+
+interface TradeRow {
+  id: string;
+  owner_pubkey: string;
+  market_id: string;
+  event_id: string | null;
+  action: 'buy' | 'sell';
+  side: 'yes' | 'no';
+  amount_usd: string;
+  price_usd: string;
+  event_title: string | null;
+  market_title: string | null;
+  message: string | null;
+  is_team_market: boolean | null;
+  upstream_timestamp: Date;
+  observed_at: Date;
+}
+
+function rowToTrade(row: TradeRow): Trade {
+  return {
+    id: row.id,
+    ownerPubkey: row.owner_pubkey,
+    marketId: row.market_id,
+    eventId: row.event_id,
+    action: row.action,
+    side: row.side,
+    amountUsd: row.amount_usd,
+    priceUsd: row.price_usd,
+    eventTitle: row.event_title,
+    marketTitle: row.market_title,
+    message: row.message,
+    isTeamMarket: row.is_team_market,
+    upstreamTimestamp: row.upstream_timestamp,
+    observedAt: row.observed_at,
+  };
+}
+
+export interface GetRecentTradesOptions {
+  /** Default: 50. Callers (the API layer) are responsible for enforcing their own max — this repository does not clamp it. */
+  limit?: number;
+  marketId?: string;
+  ownerPubkey?: string;
+}
+
+/** Read path for the API layer (`GET /api/trades/recent`) — filterable, ordered most-recent-first by upstream trade timestamp. */
+export async function getRecentTrades(options: GetRecentTradesOptions = {}): Promise<Trade[]> {
+  const limit = options.limit ?? 50;
+  const pool = getPool();
+
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  if (options.marketId) {
+    params.push(options.marketId);
+    conditions.push(`market_id = $${params.length}`);
+  }
+  if (options.ownerPubkey) {
+    params.push(options.ownerPubkey);
+    conditions.push(`owner_pubkey = $${params.length}`);
+  }
+  params.push(limit);
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const result = await pool.query<TradeRow>(
+    `SELECT id, owner_pubkey, market_id, event_id, action, side, amount_usd, price_usd,
+            event_title, market_title, message, is_team_market, upstream_timestamp, observed_at
+     FROM trades
+     ${whereClause}
+     ORDER BY upstream_timestamp DESC
+     LIMIT $${params.length}`,
+    params,
+  );
+
+  return result.rows.map(rowToTrade);
+}

@@ -19,13 +19,16 @@
     "ingest:trades:poll": "tsx src/backend/jobs/pollTrades.ts",
     "ingest:history:recent": "tsx src/backend/jobs/ingestRecentWalletHistory.ts",
     "ingest:rankings": "tsx src/backend/jobs/ingestRankings.ts",
-    "ingest:positions:recent": "tsx src/backend/jobs/ingestRecentWalletPositions.ts"
+    "ingest:positions:recent": "tsx src/backend/jobs/ingestRecentWalletPositions.ts",
+    "backend:dev": "tsx watch src/backend/api/server.ts"
   },
   "dependencies": {
+    "express": "^5.2.1",
     "pg": "^8.22.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.20.0",
     "@types/pg": "^8.20.0",
     "eslint": "^10.6.0",
