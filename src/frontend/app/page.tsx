@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { formatTimeOnly, formatUsd } from './lib/format';
 import { WalletLink } from './components/WalletLink';
+import { MarketLink } from './components/MarketLink';
 import { EmptyState } from './components/EmptyState';
 
 /**
@@ -137,7 +138,12 @@ export default function HomePage() {
                 </td>
                 <td className={`action-${trade.action}`}>{trade.action}</td>
                 <td>{trade.side}</td>
-                <td>{trade.eventTitle ?? trade.marketTitle ?? trade.marketId}</td>
+                <td>
+                  <MarketLink
+                    marketId={trade.marketId}
+                    label={trade.eventTitle ?? trade.marketTitle}
+                  />
+                </td>
                 <td>{formatUsd(trade.amountUsd)}</td>
                 <td>{formatUsd(trade.priceUsd)}</td>
                 <td>{formatTimeOnly(trade.upstreamTimestamp)}</td>

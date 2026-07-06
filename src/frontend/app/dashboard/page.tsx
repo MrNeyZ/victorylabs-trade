@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatDateTime, formatScore, formatUsd } from '../lib/format';
 import { WalletLink, WalletLinks } from '../components/WalletLink';
+import { MarketLink } from '../components/MarketLink';
 import {
   SeverityBadge,
   TierBadge,
@@ -144,7 +145,13 @@ function SignalsTable({
               <td title={signal.walletPubkeys.join(', ')}>
                 <WalletLinks pubkeys={signal.walletPubkeys} />
               </td>
-              <td>{signal.eventTitle ?? signal.marketId ?? '—'}</td>
+              <td>
+                {signal.marketId ? (
+                  <MarketLink marketId={signal.marketId} label={signal.eventTitle} />
+                ) : (
+                  '—'
+                )}
+              </td>
               <td>{signal.side ?? '—'}</td>
               <td>{formatUsd(signal.amountUsd)}</td>
               <td>{formatDateTime(signal.occurredAt)}</td>
@@ -211,8 +218,10 @@ function TopMarketsTable({ markets }: { markets: TopActiveMarket[] }) {
         </thead>
         <tbody>
           {markets.map((market) => (
-            <tr key={market.marketId} title={market.marketId}>
-              <td>{market.eventTitle ?? market.marketId}</td>
+            <tr key={market.marketId}>
+              <td>
+                <MarketLink marketId={market.marketId} label={market.eventTitle} />
+              </td>
               <td>{market.tradeCount}</td>
               <td>{formatUsd(market.volumeUsd)}</td>
               <td>{formatDateTime(market.lastTradeAt)}</td>
@@ -291,7 +300,9 @@ function TrendingMarketsTable({ markets }: { markets: TrendingMarket[] }) {
           {markets.map((market, index) => (
             <tr key={market.marketId} title={market.reason.join(' ')}>
               <td>{index + 1}</td>
-              <td title={market.marketId}>{market.eventTitle ?? market.marketId}</td>
+              <td>
+                <MarketLink marketId={market.marketId} label={market.eventTitle} />
+              </td>
               <td>{formatScore(market.trendingScore)}</td>
               <td>{market.recentTradeCount}</td>
               <td>{formatUsd(market.recentVolumeUsd)}</td>

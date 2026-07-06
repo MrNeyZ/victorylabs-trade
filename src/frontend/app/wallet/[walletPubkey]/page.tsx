@@ -13,6 +13,7 @@ import { TierBadge, type WalletScoreTier } from '../../components/Badge';
 import { EmptyState } from '../../components/EmptyState';
 import { SectionCard } from '../../components/SectionCard';
 import { RefreshBar } from '../../components/RefreshBar';
+import { MarketLink } from '../../components/MarketLink';
 
 /**
  * Same fallback/reasoning as `app/page.tsx`/`app/dashboard/page.tsx` —
@@ -268,8 +269,10 @@ function MarketBreakdownTable({ markets }: { markets: MarketBreakdownEntry[] }) 
         </thead>
         <tbody>
           {markets.map((market) => (
-            <tr key={market.marketId} title={market.marketId}>
-              <td>{market.eventTitle ?? market.marketId}</td>
+            <tr key={market.marketId}>
+              <td>
+                <MarketLink marketId={market.marketId} label={market.eventTitle} />
+              </td>
               <td>{market.totalTrades}</td>
               <td>{formatUsd(market.volumeUsd)}</td>
               <td>{formatUsd(market.realizedPnlUsd)}</td>

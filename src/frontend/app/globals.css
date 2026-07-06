@@ -237,7 +237,8 @@ td a:hover {
   text-decoration: underline;
 }
 
-.wallet-pubkey {
+.wallet-pubkey,
+.market-subtitle {
   font-size: 13px;
   color: #9a9aa8;
   word-break: break-all;

@@ -251,6 +251,16 @@ export async function getAllTradesForWallet(ownerPubkey: string): Promise<Trade[
   return getRecentTrades({ ownerPubkey, limit: ALL_ROWS_SAFETY_LIMIT });
 }
 
+/**
+ * Market-detail read path (`src/backend/analytics/marketDetail/`, Phase
+ * 4.3) — every trade for one market, not just the most recent N. Same
+ * "reuse `getRecentTrades` with a generously-large safety bound" pattern
+ * as `getAllTradesForWallet`.
+ */
+export async function getAllTradesForMarket(marketId: string): Promise<Trade[]> {
+  return getRecentTrades({ marketId, limit: ALL_ROWS_SAFETY_LIMIT });
+}
+
 export interface GetTradesSinceOptions {
   marketId?: string;
   ownerPubkey?: string;
@@ -476,11 +486,30 @@ interface MarketActivityWindowRow {
  * corrupted by a bounded scan, and bounding it keeps this cheap on a
  * `trades` table that only keeps growing.
  */
+export interface GetMarketActivityWindowsOptions {
+  /**
+   * Restrict to one market — used by the market-detail endpoint (Phase
+   * 4.3, `gatherTrendingMarketInputForMarket`) to reuse this exact query
+   * for a single market's trending inputs instead of scanning the full
+   * candidate list and filtering client-side. Omitted, this behaves
+   * identically to how Phase 4.2 left it.
+   */
+  marketId?: string;
+}
+
 export async function getMarketActivityWindows(
   recentMinutes: number,
   limit = 500,
+  options: GetMarketActivityWindowsOptions = {},
 ): Promise<MarketActivityWindow[]> {
   const pool = getPool();
+  const params: unknown[] = [recentMinutes, limit];
+  let marketFilter = '';
+  if (options.marketId !== undefined) {
+    params.push(options.marketId);
+    marketFilter = `AND market_id = $${params.length}`;
+  }
+
   const result = await pool.query<MarketActivityWindowRow>(
     `SELECT market_id,
             (ARRAY_AGG(event_title ORDER BY upstream_timestamp DESC) FILTER (WHERE event_title IS NOT NULL))[1] AS event_title,
@@ -498,11 +527,12 @@ export async function getMarketActivityWindows(
             MAX(upstream_timestamp) AS last_activity_at
      FROM trades
      WHERE upstream_timestamp >= now() - make_interval(mins => $1 * 2)
+       ${marketFilter}
      GROUP BY market_id
      HAVING COUNT(*) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) > 0
      ORDER BY COUNT(*) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) DESC
      LIMIT $2`,
-    [recentMinutes, limit],
+    params,
   );
 
   return result.rows.map((row) => ({

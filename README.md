@@ -144,8 +144,14 @@ markets instead of wallets. `/wallet/:walletPubkey` (Phase 3.9) is a third page
 — one `fetch` against `GET /api/wallets/:walletPubkey` rendering Smart
 Score, stats, activity summary, market breakdown, positions, and recent
 trades/history/score-history for one wallet; every wallet pubkey shown on
-the live feed or dashboard links here. A shared nav bar (`app/layout.tsx`)
-links between the live feed and dashboard. The dashboard and wallet pages
+the live feed, dashboard, or a market page links here.
+`/market/:marketId` (Phase 4.3) is a fourth page — one `fetch` against
+`GET /api/markets/:marketId` rendering trending score, trade activity,
+YES/NO breakdown, top/smart wallets, recent trades, and whale/consensus
+signals for one market; every market shown on the live feed, dashboard,
+or the wallet page's market breakdown links here. A shared nav bar
+(`app/layout.tsx`) links between the live feed and dashboard. The
+dashboard and wallet pages
 (Phase 3.10) both have a manual **Refresh** button and a "last updated"
 timestamp — a refresh keeps the last-good data on screen (rather than
 blanking to a loading state) and shows an inline error if it fails, so a
@@ -213,6 +219,7 @@ Base URL: `http://localhost:4100` (or `$PORT`).
 | `GET /api/dashboard?lookbackMinutes=&limit=`                                            | Combined read-only dashboard: signals, top Smart Score wallets, whale trades, market consensus, top active markets, recently active smart wallets. See [`docs/dashboard-api.md`](./docs/dashboard-api.md).                                                                |
 | `GET /api/trending/wallets?lookbackMinutes=&limit=`                                     | Wallets becoming interesting _right now_ (recent activity/growth/novelty — not "best wallet"), computed live. See [`docs/trending-wallets.md`](./docs/trending-wallets.md).                                                                                               |
 | `GET /api/trending/markets?lookbackMinutes=&limit=`                                     | Markets becoming interesting _right now_ (activity/growth/participation/signals), computed live. See [`docs/trending-markets.md`](./docs/trending-markets.md).                                                                                                            |
+| `GET /api/markets/:marketId`                                                            | Market intelligence: activity summary, trending score, YES/NO breakdown, top/smart wallets, recent trades, whale/consensus signals. Unknown market → 200 with nulls/zeros, not 404. See [`docs/market-intelligence-api.md`](./docs/market-intelligence-api.md).           |
 
 All read-only against Postgres; none of them call Jupiter or trigger
 ingestion.
@@ -297,7 +304,7 @@ src/
     types/                     jupiter.ts (raw upstream shapes) + domain.ts (normalized model)
     utils/                     decimal/string/time helpers shared by core + ingestion
   frontend/
-    app/                       Next.js App Router: layout.tsx (shared nav), page.tsx (live feed), dashboard/page.tsx, wallet/[walletPubkey]/page.tsx, globals.css
+    app/                       Next.js App Router: layout.tsx (shared nav), page.tsx (live feed), dashboard/page.tsx, wallet/[walletPubkey]/page.tsx, market/[marketId]/page.tsx, globals.css
       lib/format.ts            Shared formatting helpers (shortenPubkey, formatUsd/Score/Percent, formatDateTime/TimeOnly, formatDuration)
       components/              Shared presentational components: Badge, SectionCard, EmptyState, WalletLink, RefreshBar
   shared/                      Reserved for backend+frontend-shared types/utilities (unused so far)
