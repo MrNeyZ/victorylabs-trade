@@ -91,6 +91,21 @@ export async function countLeaderboardSnapshots(): Promise<number> {
   return Number(result.rows[0]?.count ?? '0');
 }
 
+/**
+ * Candidate-wallet source for the Smart Score leaderboard
+ * (`src/backend/analytics/scoring/gatherCandidateWallets.ts`) — every
+ * distinct wallet that has ever appeared in any leaderboard snapshot
+ * (any period, any point in time), not just the latest bucket.
+ */
+export async function getDistinctLeaderboardWalletPubkeys(limit = 500): Promise<string[]> {
+  const pool = getPool();
+  const result = await pool.query<{ wallet_pubkey: string }>(
+    'SELECT DISTINCT wallet_pubkey FROM leaderboard_snapshots ORDER BY wallet_pubkey LIMIT $1',
+    [limit],
+  );
+  return result.rows.map((row) => row.wallet_pubkey);
+}
+
 interface LeaderboardSnapshotRow {
   wallet_pubkey: string;
   period: LeaderboardPeriod;

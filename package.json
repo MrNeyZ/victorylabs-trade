@@ -21,6 +21,7 @@
     "ingest:rankings": "tsx src/backend/jobs/ingestRankings.ts",
     "ingest:positions:recent": "tsx src/backend/jobs/ingestRecentWalletPositions.ts",
     "analytics:wallet": "tsx src/backend/jobs/analyticsWallet.ts",
+    "analytics:leaderboard": "tsx src/backend/jobs/analyticsLeaderboard.ts",
     "backend:dev": "tsx watch src/backend/api/server.ts",
     "frontend:dev": "next dev src/frontend",
     "dev:backend": "npm run backend:dev",

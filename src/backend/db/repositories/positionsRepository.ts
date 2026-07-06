@@ -125,6 +125,16 @@ export async function countPositions(): Promise<number> {
   return Number(result.rows[0]?.count ?? '0');
 }
 
+/** Candidate-wallet source for the Smart Score leaderboard (`src/backend/analytics/scoring/gatherCandidateWallets.ts`) — every distinct wallet with at least one ingested position. */
+export async function getDistinctPositionOwnerPubkeys(limit = 500): Promise<string[]> {
+  const pool = getPool();
+  const result = await pool.query<{ owner_pubkey: string }>(
+    'SELECT DISTINCT owner_pubkey FROM positions ORDER BY owner_pubkey LIMIT $1',
+    [limit],
+  );
+  return result.rows.map((row) => row.owner_pubkey);
+}
+
 export async function getPositionsForWallet(ownerPubkey: string): Promise<Position[]> {
   const pool = getPool();
   const result = await pool.query<{

@@ -66,6 +66,16 @@ export async function countWalletProfiles(): Promise<number> {
   return Number(result.rows[0]?.count ?? '0');
 }
 
+/** Candidate-wallet source for the Smart Score leaderboard (`src/backend/analytics/scoring/gatherCandidateWallets.ts`) — every wallet with a profile snapshot. */
+export async function getAllWalletProfilePubkeys(limit = 500): Promise<string[]> {
+  const pool = getPool();
+  const result = await pool.query<{ wallet_pubkey: string }>(
+    'SELECT wallet_pubkey FROM wallet_profiles ORDER BY wallet_pubkey LIMIT $1',
+    [limit],
+  );
+  return result.rows.map((row) => row.wallet_pubkey);
+}
+
 export async function getWalletProfile(walletPubkey: string): Promise<WalletProfile | null> {
   const pool = getPool();
   const result = await pool.query<{
