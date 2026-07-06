@@ -98,3 +98,34 @@ export async function getLatestTradeTimestamp(): Promise<Date | null> {
   );
   return result.rows[0]?.upstream_timestamp ?? null;
 }
+
+export interface GetRecentActiveWalletsOptions {
+  /** How far back to look, by our own ingestion wall-clock (`observed_at`), not upstream's trade timestamp. Default: 60. */
+  sinceMinutes?: number;
+  /** Default: 100. */
+  limit?: number;
+}
+
+/**
+ * Reconciliation-preparation helper only — does NOT call `/history` or
+ * touch anything beyond `trades`. Returns distinct `owner_pubkey`s seen in
+ * recently-ingested trades, most-recently-active first, as the candidate
+ * wallet list a future phase would feed into per-wallet `/history` calls.
+ */
+export async function getRecentActiveWallets(
+  options: GetRecentActiveWalletsOptions = {},
+): Promise<string[]> {
+  const sinceMinutes = options.sinceMinutes ?? 60;
+  const limit = options.limit ?? 100;
+  const pool = getPool();
+  const result = await pool.query<{ owner_pubkey: string }>(
+    `SELECT owner_pubkey
+     FROM trades
+     WHERE observed_at >= now() - make_interval(mins => $1)
+     GROUP BY owner_pubkey
+     ORDER BY MAX(observed_at) DESC
+     LIMIT $2`,
+    [sinceMinutes, limit],
+  );
+  return result.rows.map((row) => row.owner_pubkey);
+}

@@ -15,7 +15,8 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "db:migrate": "tsx src/backend/db/migrate.ts",
-    "ingest:trades:once": "tsx src/backend/jobs/ingestTradesOnce.ts"
+    "ingest:trades:once": "tsx src/backend/jobs/ingestTradesOnce.ts",
+    "ingest:trades:poll": "tsx src/backend/jobs/pollTrades.ts"
   },
   "dependencies": {
     "pg": "^8.22.0"

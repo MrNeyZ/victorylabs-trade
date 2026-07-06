@@ -1,3 +1,3 @@
-// Jupiter Prediction REST API polling/ingestion. Only a one-shot trades
-// ingestion exists so far — no polling loop yet.
+// Jupiter Prediction REST API polling/ingestion.
 export * from './ingestTradesOnce.js';
+export * from './pollTrades.js';

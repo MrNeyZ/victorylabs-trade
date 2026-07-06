@@ -24,7 +24,7 @@ export interface IngestTradesOnceResult {
   durationMs: number;
 }
 
-function clientOptionsFromEnv(): JupiterPredictionClientOptions {
+export function clientOptionsFromEnv(): JupiterPredictionClientOptions {
   const options: JupiterPredictionClientOptions = {};
   const baseUrl = process.env['JUPITER_PREDICTION_BASE_URL'];
   const apiKey = process.env['JUPITER_API_KEY'];
