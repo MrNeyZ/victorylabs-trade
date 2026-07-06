@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 /**
  * Falls back to the backend's own default port (see
@@ -131,7 +132,11 @@ export default function HomePage() {
           <tbody>
             {trades.map((trade) => (
               <tr key={trade.id} data-trade-id={trade.id}>
-                <td title={trade.ownerPubkey}>{shortenPubkey(trade.ownerPubkey)}</td>
+                <td title={trade.ownerPubkey}>
+                  <Link href={`/wallet/${trade.ownerPubkey}`}>
+                    {shortenPubkey(trade.ownerPubkey)}
+                  </Link>
+                </td>
                 <td className={`action-${trade.action}`}>{trade.action}</td>
                 <td>{trade.side}</td>
                 <td>{trade.eventTitle ?? trade.marketTitle ?? trade.marketId}</td>

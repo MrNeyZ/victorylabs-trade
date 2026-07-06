@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 /**
  * Same fallback/reasoning as `app/page.tsx` — Next's env-file loading is
@@ -68,8 +69,26 @@ function shortenPubkey(pubkey: string): string {
   return pubkey.length > 10 ? `${pubkey.slice(0, 4)}…${pubkey.slice(-4)}` : pubkey;
 }
 
-function formatWalletList(pubkeys: string[]): string {
-  return pubkeys.map(shortenPubkey).join(', ');
+/** New in Phase 3.9 — every wallet pubkey rendered on this page links to its detail page (`/wallet/[walletPubkey]`). */
+function WalletLink({ pubkey }: { pubkey: string }) {
+  return (
+    <Link href={`/wallet/${pubkey}`} title={pubkey}>
+      {shortenPubkey(pubkey)}
+    </Link>
+  );
+}
+
+function WalletLinks({ pubkeys }: { pubkeys: string[] }) {
+  return (
+    <>
+      {pubkeys.map((pubkey, index) => (
+        <span key={pubkey}>
+          {index > 0 && ', '}
+          <WalletLink pubkey={pubkey} />
+        </span>
+      ))}
+    </>
+  );
 }
 
 function formatUsd(value: string | null): string {
@@ -126,7 +145,7 @@ function SignalsTable({
                 <SeverityBadge severity={signal.severity} />
               </td>
               <td title={signal.walletPubkeys.join(', ')}>
-                {formatWalletList(signal.walletPubkeys)}
+                <WalletLinks pubkeys={signal.walletPubkeys} />
               </td>
               <td>{signal.eventTitle ?? signal.marketId ?? '—'}</td>
               <td>{signal.side ?? '—'}</td>
@@ -164,7 +183,9 @@ function WalletScoreTable({
           {wallets.map((wallet, index) => (
             <tr key={wallet.walletPubkey} title={wallet.explanations.join(' ')}>
               <td>{index + 1}</td>
-              <td title={wallet.walletPubkey}>{shortenPubkey(wallet.walletPubkey)}</td>
+              <td>
+                <WalletLink pubkey={wallet.walletPubkey} />
+              </td>
               <td>{wallet.score}</td>
               <td>
                 <TierBadge tier={wallet.tier} />

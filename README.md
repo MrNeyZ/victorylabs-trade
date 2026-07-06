@@ -136,8 +136,12 @@ database, appending new ones as later ingestion runs add them.
 `/dashboard` (Phase 3.8) is a second page, one plain `fetch` against
 `GET /api/dashboard` on load — signals, top Smart Score wallets, whale
 trades, market consensus, top active markets, and recently active smart
-wallets in one view. A shared nav bar (`app/layout.tsx`) links between
-the two.
+wallets in one view. `/wallet/:walletPubkey` (Phase 3.9) is a third page
+— one `fetch` against `GET /api/wallets/:walletPubkey` rendering Smart
+Score, stats, activity summary, market breakdown, positions, and recent
+trades/history/score-history for one wallet; every wallet pubkey shown on
+the live feed or dashboard links here. A shared nav bar (`app/layout.tsx`)
+links between the live feed and dashboard.
 
 **Other ingestion jobs**, run on demand, each bounded and exits on its own
 (none of them loop forever unless you explicitly pass `--forever` to
@@ -283,7 +287,7 @@ src/
     types/                     jupiter.ts (raw upstream shapes) + domain.ts (normalized model)
     utils/                     decimal/string/time helpers shared by core + ingestion
   frontend/
-    app/                       Next.js App Router: layout.tsx (shared nav), page.tsx (live feed), dashboard/page.tsx, globals.css
+    app/                       Next.js App Router: layout.tsx (shared nav), page.tsx (live feed), dashboard/page.tsx, wallet/[walletPubkey]/page.tsx, globals.css
   shared/                      Reserved for backend+frontend-shared types/utilities (unused so far)
 ```
 

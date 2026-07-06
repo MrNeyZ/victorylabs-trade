@@ -209,3 +209,47 @@ tbody tr:hover td {
 .tier-unknown {
   color: #6d6d78;
 }
+
+/* Wallet detail (Phase 3.9) */
+td a {
+  color: #7fb8e0;
+  text-decoration: none;
+}
+
+td a:hover {
+  text-decoration: underline;
+}
+
+.wallet-pubkey {
+  font-size: 13px;
+  color: #9a9aa8;
+  word-break: break-all;
+  margin: 0 0 20px;
+}
+
+.score-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
+.score-value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.explanation-list {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: #9a9aa8;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.card-footnote {
+  margin: 14px 0 0;
+  color: #9a9aa8;
+  font-size: 12px;
+}
