@@ -14,6 +14,7 @@ src/frontend/.next/
 # logs (research artifacts under docs/ are intentionally tracked, not ignored)
 /*.log
 npm-debug.log*
+/logs/
 
 # OS / editor
 .DS_Store

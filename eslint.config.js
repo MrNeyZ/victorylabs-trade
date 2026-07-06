@@ -39,5 +39,16 @@ export default tseslint.config(
       globals: globals.node,
     },
   },
+  {
+    // PM2's own config format is CommonJS (`module.exports = {...}`)
+    // regardless of this package's `"type": "module"` — the `.cjs`
+    // extension is what tells Node to run it that way.
+    files: ['ecosystem.config.cjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'commonjs',
+      globals: globals.node,
+    },
+  },
   eslintConfigPrettier,
 );

@@ -3,14 +3,16 @@
 Smart Money analytics platform for **Jupiter Prediction** (Solana's on-chain
 prediction markets product, `api.jup.ag/prediction/v1`).
 
-Status: **MVP loop working end-to-end, locally.** Postgres schema,
-Jupiter ingestion (trades/history/positions/profiles/leaderboards), a
-read-only REST + SSE backend, and a minimal live-feed frontend all exist
-and have been verified together against real Jupiter data. Nothing is
-deployed; there is no scheduler keeping data fresh on its own; no
-smart-money scoring exists yet. See [`docs/mvp-status.md`](./docs/mvp-status.md)
-for the full, current-state breakdown (what works / what's missing /
-known risks), and §6-9 below for how to run it.
+Status: **MVP deployed to production** at
+[trade.victorylabs.app](https://trade.victorylabs.app) (§13), on top of
+an end-to-end local dev loop that's been verified against real Jupiter
+data since early on: Postgres schema, Jupiter ingestion, a read-only
+REST + SSE backend, Smart Score/Trending/signal analytics, and a full
+dashboard/live-feed/wallet/market frontend. There is still no persistent
+ingestion scheduler keeping production data fresh on its own — see
+[`docs/mvp-status.md`](./docs/mvp-status.md) for the full current-state
+breakdown (what works / what's missing / known risks), §6-9 below for
+local dev, and §13 for the production deployment itself.
 
 ---
 
@@ -339,4 +341,163 @@ Dependencies added so far, each for one concrete reason: `pg` (Postgres),
 `express` (HTTP + SSE), `next`/`react`/`react-dom` (frontend),
 `concurrently` (dev-only, runs backend+frontend together in `dev:all`).
 No ORM, no CORS package (3 headers set manually — this API has no
-cookies/auth to protect), no test framework yet, no Docker, no PM2.
+cookies/auth to protect), no test framework yet, no Docker. PM2 is used
+in production only (§13) — local dev never uses it.
+
+## 13. Production deployment
+
+**Live at [https://trade.victorylabs.app](https://trade.victorylabs.app)**
+(Phase 4.5). Deployed on the same VPS as VictoryLabs' other services
+(`nft-live-feed`, `wallet-checker`) — same PM2 daemon, same nginx
+instance, same Cloudflare Origin certificate — but its own checkout, own
+Postgres role/database, own PM2 processes, and own nginx site file, so it
+can be redeployed/restarted/rolled back without touching theirs.
+
+|               |                                                                                                                                                                                                |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Directory     | `/root/vl-trade` (this repo, `main` branch)                                                                                                                                                    |
+| Backend port  | `4100` (bound to `127.0.0.1` only, not internet-reachable — ufw default-denies everything except 22/80/443, and 80/443 accept only Cloudflare's IP ranges)                                     |
+| Frontend port | `4200` (same isolation as the backend)                                                                                                                                                         |
+| PM2 processes | `vltrade-backend`, `vltrade-frontend` (see `ecosystem.config.cjs`)                                                                                                                             |
+| nginx site    | `/etc/nginx/sites-available/vltrade` (symlinked into `sites-enabled/vltrade`)                                                                                                                  |
+| Database      | Postgres role `vltrade`, database `vltrade` (dedicated, not shared with other projects)                                                                                                        |
+| TLS           | Cloudflare Origin Certificate — the same wildcard cert (`*.victorylabs.app`) `nft-live-feed`/`wallet-checker` already use, at `/etc/nginx/ssl/{cert,key}.pem`. No new certificate was created. |
+
+### 13.1 Architecture
+
+```
+Browser ──HTTPS──▶ Cloudflare ──HTTPS (Origin Cert)──▶ nginx :443
+                                                          │
+                                    /api/*, /health  ─────┼──▶ vltrade-backend  (127.0.0.1:4100, PM2, tsx)
+                                    everything else  ─────┴──▶ vltrade-frontend (127.0.0.1:4200, PM2, next start)
+```
+
+The frontend's production build has `NEXT_PUBLIC_API_BASE_URL` set to an
+**empty string** (`src/frontend/.env.production`) rather than an absolute
+URL — every `fetch`/`EventSource` call in the frontend becomes a
+same-origin relative request (`/api/dashboard`, `/api/trades/stream`,
+...), which nginx then routes to the backend. This is what makes "proxy
+internally only, don't expose the backend publicly" work: there is no
+public hostname or open port that reaches :4100 directly — the only path
+to it is through nginx's `/api/`/`/health` locations on the same
+origin as the frontend.
+
+The backend runs via `tsx` (interpreted TypeScript), not a compiled
+`dist/` bundle — every phase of this project, in dev and in every prior
+verification pass, only ever ran it this way; production deployment kept
+that same execution path rather than introducing a new, previously
+untested one. The frontend, by contrast, runs a real `next build` +
+`next start` production server (§13.3) — Next.js's dev server was never
+an option for production regardless.
+
+### 13.2 PM2 commands
+
+```bash
+pm2 list                              # status of all processes on this VPS (not just vltrade's)
+pm2 logs vltrade-backend              # tail backend stdout+stderr
+pm2 logs vltrade-frontend             # tail frontend stdout+stderr
+pm2 restart vltrade-backend           # restart just the backend
+pm2 restart vltrade-frontend          # restart just the frontend
+pm2 restart vltrade-backend vltrade-frontend   # restart both
+pm2 stop vltrade-backend vltrade-frontend      # stop both (does not remove them)
+pm2 describe vltrade-backend          # full process detail (cwd, script, memory, restarts)
+pm2 save                              # persist the current process list so it survives a host reboot
+```
+
+`pm2 restart`/`pm2 stop`/`pm2 logs` scoped to `vltrade-backend`/
+`vltrade-frontend` by name only ever affect these two processes — they do
+not touch `nft-backend`, `nft-frontend`, `wallet-checker-backend`, or
+`wallet-checker-web`.
+
+Logs also live on disk at `/root/vl-trade/logs/{backend,frontend}.{out,err}.log`
+(rotated by the VPS-wide `pm2-logrotate` module already installed —
+nothing project-specific to configure).
+
+### 13.3 Update procedure
+
+```bash
+cd /root/vl-trade
+git pull origin main
+npm install                           # pick up any new/updated dependencies
+npm run db:migrate                    # idempotent — safe even with no new migrations
+npm run frontend:build                # next build src/frontend — required before restarting the frontend
+pm2 restart vltrade-backend vltrade-frontend
+pm2 save
+```
+
+Run `npm run typecheck` and `npm run lint` before restarting if the
+update includes code changes you haven't already verified — same
+pre-deploy gate every phase of this project has used locally.
+
+There is no separate "bootstrap ingestion" step in a routine update —
+that only runs once, at initial deployment (§13.5). Ongoing data
+freshness is a known gap (see §8, "no persistent ingestion scheduler
+yet") — the deployed backend currently only serves whatever was last
+ingested, the same limitation local dev has always had.
+
+### 13.4 Rollback procedure
+
+```bash
+cd /root/vl-trade
+git log --oneline -10                 # find the last known-good commit
+git checkout <known-good-commit-or-tag>
+npm install
+npm run frontend:build
+pm2 restart vltrade-backend vltrade-frontend
+pm2 save
+git checkout main                     # return the working tree to the branch tip once stable
+```
+
+Database migrations are additive-only (no destructive migration has ever
+been written for this project) — rolling back application code does not
+require rolling back the schema. If a specific bad migration ever needs
+undoing, that would be a manual, one-off `psql` operation against the
+`vltrade` database — not a scripted rollback path, since none has been
+needed yet.
+
+To roll back nginx or PM2 configuration itself (not application code):
+
+```bash
+# nginx: edit /etc/nginx/sites-available/vltrade directly, then
+nginx -t && systemctl reload nginx    # -t validates BEFORE reloading — never reload on a failed test
+
+# PM2: ecosystem.config.cjs is version-controlled; after editing/reverting it
+pm2 delete vltrade-backend vltrade-frontend
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+### 13.5 Initial deployment reference (already done once)
+
+For context — this is what stood the service up initially and does not
+need to be repeated on routine updates (§13.3):
+
+```bash
+# One-time: dedicated Postgres role + database
+sudo -u postgres psql -c "CREATE ROLE vltrade WITH LOGIN PASSWORD '...';"
+sudo -u postgres psql -c "CREATE DATABASE vltrade OWNER vltrade;"
+
+# .env (backend, repo root) and src/frontend/.env.production (frontend
+# build-time) created by hand — see §5 for backend variables;
+# NEXT_PUBLIC_API_BASE_URL is deliberately left empty in the frontend one
+# (§13.1).
+
+npm install
+npm run db:migrate
+
+# One-time data bootstrap — never re-run automatically, no forever loop
+npm run ingest:trades:once
+npm run ingest:rankings
+npm run ingest:positions:recent
+npm run ingest:history:recent
+npm run analytics:scores
+npm run analytics:signals:persist     # production thresholds — no demo overrides
+
+npm run frontend:build
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+nginx site (`/etc/nginx/sites-available/vltrade`, symlinked into
+`sites-enabled/`) and the `logs/` directory are the only other
+production-specific artifacts; both are described above.
