@@ -18,6 +18,14 @@
  * `DATABASE_URL` is required — `getPool()` (see `../db/client.ts`) throws
  * if it's unset, and that's called here before the server starts
  * listening, not lazily on the first request.
+ *
+ * CORS is wide open (`Access-Control-Allow-Origin: *`) rather than a new
+ * `cors` package dependency — this is a read-only, unauthenticated API
+ * (no cookies/credentials anywhere in this project), and Phase 2.9's
+ * frontend calls it directly cross-origin (no Next.js proxy), so every
+ * route needs this or the browser blocks it outright — confirmed live:
+ * without it, the frontend's EventSource connection to `/api/trades/stream`
+ * failed with "blocked by CORS policy" in the browser console.
  */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -33,6 +41,17 @@ const DEFAULT_PORT = 4100;
 export function createServer(): Express {
   const app = express();
   app.disable('x-powered-by');
+
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
+    next();
+  });
 
   app.use('/health', healthRouter);
   app.use('/api/trades', tradesRouter);
