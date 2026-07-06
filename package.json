@@ -14,7 +14,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "db:migrate": "tsx src/backend/db/migrate.ts"
+    "db:migrate": "tsx src/backend/db/migrate.ts",
+    "ingest:trades:once": "tsx src/backend/jobs/ingestTradesOnce.ts"
   },
   "dependencies": {
     "pg": "^8.22.0"

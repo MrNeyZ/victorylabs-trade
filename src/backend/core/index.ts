@@ -1,2 +1,2 @@
-// Domain/business logic — not yet implemented.
-export {};
+// Domain/business logic. Only trade normalization exists so far.
+export * from './normalizeTrade.js';
