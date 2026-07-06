@@ -4,3 +4,4 @@
 export * from './walletStats/index.js';
 export * from './scoring/index.js';
 export * from './signals/index.js';
+export * from './dashboard/index.js';

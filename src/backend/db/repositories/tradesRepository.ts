@@ -304,3 +304,58 @@ export async function getTradesSince(
 
   return result.rows.map(rowToTrade);
 }
+
+export interface TopActiveMarket {
+  marketId: string;
+  /** Most recent non-null `event_title` among trades in this market within the window; `null` if none had one. */
+  eventTitle: string | null;
+  tradeCount: number;
+  volumeUsd: string;
+  lastTradeAt: Date;
+}
+
+interface TopActiveMarketRow {
+  market_id: string;
+  event_title: string | null;
+  trade_count: string;
+  volume_usd: string;
+  last_trade_at: Date;
+}
+
+/**
+ * Dashboard read path (`GET /api/dashboard`, Phase 3.7) — trades within
+ * the last `lookbackMinutes`, aggregated per market and ranked by summed
+ * `amount_usd` descending. The sum is computed in SQL over Postgres'
+ * arbitrary-precision `NUMERIC`, not fetched row-by-row and summed in JS
+ * — same precision-safety intent as `sumDecimalStrings`
+ * (`../../utils/decimal.ts`), just done on the database side instead,
+ * since aggregating over a whole market's trades in Node would mean
+ * pulling every individual row across the network for no reason.
+ */
+export async function getTopActiveMarkets(
+  lookbackMinutes: number,
+  limit = 20,
+): Promise<TopActiveMarket[]> {
+  const pool = getPool();
+  const result = await pool.query<TopActiveMarketRow>(
+    `SELECT market_id,
+            (ARRAY_AGG(event_title ORDER BY upstream_timestamp DESC) FILTER (WHERE event_title IS NOT NULL))[1] AS event_title,
+            COUNT(*)::text AS trade_count,
+            SUM(amount_usd)::text AS volume_usd,
+            MAX(upstream_timestamp) AS last_trade_at
+     FROM trades
+     WHERE upstream_timestamp >= now() - make_interval(mins => $1)
+     GROUP BY market_id
+     ORDER BY SUM(amount_usd) DESC
+     LIMIT $2`,
+    [lookbackMinutes, limit],
+  );
+
+  return result.rows.map((row) => ({
+    marketId: row.market_id,
+    eventTitle: row.event_title,
+    tradeCount: Number(row.trade_count),
+    volumeUsd: row.volume_usd,
+    lastTradeAt: row.last_trade_at,
+  }));
+}

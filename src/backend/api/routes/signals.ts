@@ -22,7 +22,7 @@ import {
   type DetectSmartMoneySignalsConfig,
 } from '../../analytics/signals/detectSmartMoneySignals.js';
 import { getRecentSignals } from '../../db/repositories/signalsRepository.js';
-import { firstQueryString, parseLimitParam } from '../queryParams.js';
+import { firstQueryString, parseLimitParam, parsePositiveIntParam } from '../queryParams.js';
 
 export const signalsRouter = Router();
 
@@ -33,29 +33,6 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
 type SignalSource = 'persisted' | 'live';
-
-type ParsePositiveIntResult = { ok: true; value: number } | { ok: false; message: string };
-
-function parsePositiveIntParam(
-  value: unknown,
-  paramName: string,
-  defaultValue: number,
-  maxValue: number,
-): ParsePositiveIntResult {
-  if (value === undefined) return { ok: true, value: defaultValue };
-
-  const raw = firstQueryString(value);
-  if (raw === undefined) {
-    return { ok: false, message: `${paramName} must be a single value` };
-  }
-
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
-    return { ok: false, message: `${paramName} must be a positive integer` };
-  }
-
-  return { ok: true, value: Math.min(parsed, maxValue) };
-}
 
 function isSignalSource(value: string): value is SignalSource {
   return value === 'persisted' || value === 'live';

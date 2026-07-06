@@ -193,6 +193,7 @@ Base URL: `http://localhost:4100` (or `$PORT`).
 | `GET /api/leaderboards/latest?period=`                                                  | `period`: `all_time` (default) \| `weekly` \| `monthly`.                                                                                                                                                                                                                  |
 | `GET /api/scores/latest?limit=&tier=&minScore=`                                         | Most recent persisted Smart Score snapshot bucket, sorted by score desc. `limit` default 50, max 200. See [`docs/smart-score.md`](./docs/smart-score.md) §6.                                                                                                              |
 | `GET /api/signals/recent?source=persisted\|live&lookbackMinutes=&minSmartScore=&limit=` | Smart Money Signals. `source=persisted` (default) reads the `smart_money_signals` table; `source=live` recomputes on request. See [`docs/smart-money-signals.md`](./docs/smart-money-signals.md).                                                                         |
+| `GET /api/dashboard?lookbackMinutes=&limit=`                                            | Combined read-only dashboard: signals, top Smart Score wallets, whale trades, market consensus, top active markets, recently active smart wallets. See [`docs/dashboard-api.md`](./docs/dashboard-api.md).                                                                |
 
 All read-only against Postgres; none of them call Jupiter or trigger
 ingestion.
