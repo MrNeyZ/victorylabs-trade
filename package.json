@@ -21,7 +21,11 @@
     "ingest:rankings": "tsx src/backend/jobs/ingestRankings.ts",
     "ingest:positions:recent": "tsx src/backend/jobs/ingestRecentWalletPositions.ts",
     "backend:dev": "tsx watch src/backend/api/server.ts",
-    "frontend:dev": "next dev src/frontend"
+    "frontend:dev": "next dev src/frontend",
+    "dev:backend": "npm run backend:dev",
+    "dev:frontend": "npm run frontend:dev",
+    "dev:ingest:trades": "npm run ingest:trades:poll",
+    "dev:all": "npm run db:migrate && npm run ingest:trades:poll && concurrently -n backend,frontend -c blue,magenta \"npm:backend:dev\" \"npm:frontend:dev\""
   },
   "dependencies": {
     "express": "^5.2.1",
@@ -40,6 +44,7 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "concurrently": "^10.0.3",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.7.0",
