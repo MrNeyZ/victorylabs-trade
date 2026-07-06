@@ -18,17 +18,8 @@
  */
 import type { JupiterHistoryEventV1 } from '../types/jupiter.js';
 import type { HistoryEvent } from '../types/domain.js';
-import { microUsdToUsd } from '../utils/decimal.js';
-
-/** Empty-string pubkey/id fields upstream (confirmed live, e.g. `orderPubkey: ""` on settlement-only events) are not meaningful identifiers — normalized to `null` rather than kept as `""`. */
-function nullIfEmpty(value: string | undefined): string | null {
-  return value && value.length > 0 ? value : null;
-}
-
-function toMicroUsdOrNull(value: string | null | undefined): string | null {
-  if (value === null || value === undefined) return null;
-  return microUsdToUsd(value);
-}
+import { microUsdToUsd, microUsdToUsdOrNull } from '../utils/decimal.js';
+import { nullIfEmpty } from '../utils/strings.js';
 
 /**
  * There is no single upstream field that means "the dollar amount" for
@@ -71,8 +62,8 @@ export function normalizeHistoryEvent(raw: JupiterHistoryEventV1, observedAt: Da
     eventTitle: raw.eventMetadata?.title ?? raw.marketMetadata?.title ?? null,
     upstreamTimestamp: Number.isFinite(raw.timestamp) ? new Date(raw.timestamp * 1000) : null,
     amountUsd: pickAmountUsd(raw),
-    price: toMicroUsdOrNull(raw.avgFillPriceUsd),
-    realizedPnlUsd: toMicroUsdOrNull(raw.realizedPnl),
+    price: microUsdToUsdOrNull(raw.avgFillPriceUsd),
+    realizedPnlUsd: microUsdToUsdOrNull(raw.realizedPnl),
     transactionSignature: nullIfEmpty(raw.signature),
     observedAt,
   };

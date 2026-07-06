@@ -34,3 +34,9 @@ export function microUsdToUsd(microUsd: string): string {
   const isZero = /^0+$/.test(integerPart) && /^0+$/.test(fractionPart);
   return negative && !isZero ? `-${unsigned}` : unsigned;
 }
+
+/** Same as `microUsdToUsd`, but passes through `null`/`undefined` — for upstream fields documented (or empirically confirmed) as nullable. */
+export function microUsdToUsdOrNull(microUsd: string | null | undefined): string | null {
+  if (microUsd === null || microUsd === undefined) return null;
+  return microUsdToUsd(microUsd);
+}

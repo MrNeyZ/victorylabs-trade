@@ -5,3 +5,5 @@ export * from './client.js';
 export * from './repositories/tradesRepository.js';
 export * from './repositories/ingestionRunsRepository.js';
 export * from './repositories/historyRepository.js';
+export * from './repositories/walletProfilesRepository.js';
+export * from './repositories/leaderboardsRepository.js';
