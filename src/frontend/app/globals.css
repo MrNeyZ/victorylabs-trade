@@ -105,6 +105,23 @@ tbody tr:hover td {
   color: #d96867;
 }
 
+.loading-state {
+  padding: 32px 0;
+  text-align: center;
+  color: #9a9aa8;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* Shared nav (Phase 3.8) */
 .site-nav {
   display: flex;
@@ -252,4 +269,57 @@ td a:hover {
   margin: 14px 0 0;
   color: #9a9aa8;
   font-size: 12px;
+}
+
+/* Refresh + status meta (Phase 3.10) */
+.page-meta {
+  color: #9a9aa8;
+  font-size: 12px;
+}
+
+.refresh-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: -6px 0 20px;
+}
+
+.refresh-button {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e6e6ea;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.refresh-error {
+  padding: 0;
+  text-align: left;
+  font-size: 12px;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.status-row .status {
+  margin-bottom: 0;
 }

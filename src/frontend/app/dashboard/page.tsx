@@ -1,7 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { formatDateTime, formatScore, formatUsd } from '../lib/format';
+import { WalletLink, WalletLinks } from '../components/WalletLink';
+import {
+  SeverityBadge,
+  TierBadge,
+  type SignalSeverity,
+  type WalletScoreTier,
+} from '../components/Badge';
+import { EmptyState } from '../components/EmptyState';
+import { SectionCard } from '../components/SectionCard';
+import { RefreshBar } from '../components/RefreshBar';
 
 /**
  * Same fallback/reasoning as `app/page.tsx` — Next's env-file loading is
@@ -13,8 +23,6 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4
 type LoadState = 'loading' | 'loaded' | 'error';
 
 type SignalType = 'smart_wallet_trade' | 'elite_wallet_trade' | 'market_consensus' | 'whale_trade';
-type SignalSeverity = 'low' | 'medium' | 'high';
-type WalletScoreTier = 'elite' | 'strong' | 'watch' | 'weak' | 'unknown';
 
 interface SignalScoreContextEntry {
   walletPubkey: string;
@@ -65,55 +73,6 @@ interface DashboardResponse {
   activeSmartWallets: WalletScoreSnapshot[];
 }
 
-function shortenPubkey(pubkey: string): string {
-  return pubkey.length > 10 ? `${pubkey.slice(0, 4)}…${pubkey.slice(-4)}` : pubkey;
-}
-
-/** New in Phase 3.9 — every wallet pubkey rendered on this page links to its detail page (`/wallet/[walletPubkey]`). */
-function WalletLink({ pubkey }: { pubkey: string }) {
-  return (
-    <Link href={`/wallet/${pubkey}`} title={pubkey}>
-      {shortenPubkey(pubkey)}
-    </Link>
-  );
-}
-
-function WalletLinks({ pubkeys }: { pubkeys: string[] }) {
-  return (
-    <>
-      {pubkeys.map((pubkey, index) => (
-        <span key={pubkey}>
-          {index > 0 && ', '}
-          <WalletLink pubkey={pubkey} />
-        </span>
-      ))}
-    </>
-  );
-}
-
-function formatUsd(value: string | null): string {
-  if (value === null) return '—';
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? `$${parsed.toFixed(2)}` : value;
-}
-
-function formatTime(iso: string): string {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
-}
-
-function SeverityBadge({ severity }: { severity: SignalSeverity }) {
-  return <span className={`badge severity-${severity}`}>{severity}</span>;
-}
-
-function TierBadge({ tier }: { tier: WalletScoreTier }) {
-  return <span className={`badge tier-${tier}`}>{tier}</span>;
-}
-
-function EmptyState({ message }: { message: string }) {
-  return <p className="empty-state">{message}</p>;
-}
-
 function SignalsTable({
   signals,
   emptyMessage,
@@ -150,7 +109,7 @@ function SignalsTable({
               <td>{signal.eventTitle ?? signal.marketId ?? '—'}</td>
               <td>{signal.side ?? '—'}</td>
               <td>{formatUsd(signal.amountUsd)}</td>
-              <td>{formatTime(signal.occurredAt)}</td>
+              <td>{formatDateTime(signal.occurredAt)}</td>
             </tr>
           ))}
         </tbody>
@@ -186,7 +145,7 @@ function WalletScoreTable({
               <td>
                 <WalletLink pubkey={wallet.walletPubkey} />
               </td>
-              <td>{wallet.score}</td>
+              <td>{formatScore(wallet.score)}</td>
               <td>
                 <TierBadge tier={wallet.tier} />
               </td>
@@ -218,7 +177,7 @@ function TopMarketsTable({ markets }: { markets: TopActiveMarket[] }) {
               <td>{market.eventTitle ?? market.marketId}</td>
               <td>{market.tradeCount}</td>
               <td>{formatUsd(market.volumeUsd)}</td>
-              <td>{formatTime(market.lastTradeAt)}</td>
+              <td>{formatDateTime(market.lastTradeAt)}</td>
             </tr>
           ))}
         </tbody>
@@ -231,12 +190,31 @@ export default function DashboardPage() {
   const [state, setState] = useState<LoadState>('loading');
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
+  // Guards every setState below against firing after unmount — shared by
+  // both the mount-time load and the refresh button's click handler, so
+  // it has to be a ref (not the old per-effect `cancelled` local) since
+  // both call sites share this one function.
+  const mountedRef = useRef(true);
   useEffect(() => {
-    let cancelled = false;
-    setState('loading');
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
-    fetch(`${API_BASE_URL}/api/dashboard`)
+  const loadDashboard = useCallback((isInitial: boolean) => {
+    if (isInitial) {
+      setState('loading');
+    } else {
+      setIsRefreshing(true);
+      setRefreshError(null);
+    }
+
+    return fetch(`${API_BASE_URL}/api/dashboard`)
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(`Dashboard request failed (HTTP ${response.status})`);
@@ -244,26 +222,39 @@ export default function DashboardPage() {
         return (await response.json()) as DashboardResponse;
       })
       .then((payload) => {
-        if (cancelled) return;
+        if (!mountedRef.current) return;
         setData(payload);
         setState('loaded');
+        setLastUpdatedAt(new Date());
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
-        setErrorMessage(err instanceof Error ? err.message : 'Failed to load dashboard');
-        setState('error');
+        if (!mountedRef.current) return;
+        const message = err instanceof Error ? err.message : 'Failed to load dashboard';
+        // A failed *refresh* keeps whatever data is already on screen —
+        // only a failed *initial* load has nothing to fall back to, so
+        // only that case replaces the page with the error state.
+        if (isInitial) {
+          setErrorMessage(message);
+          setState('error');
+        } else {
+          setRefreshError(message);
+        }
+      })
+      .finally(() => {
+        if (!mountedRef.current) return;
+        if (!isInitial) setIsRefreshing(false);
       });
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    void loadDashboard(true);
+  }, [loadDashboard]);
 
   return (
     <main>
       <h1>Smart Money Dashboard</h1>
 
-      {state === 'loading' && <p className="empty-state">Loading dashboard…</p>}
+      {state === 'loading' && <p className="loading-state">Loading dashboard…</p>}
 
       {state === 'error' && (
         <p className="error-state">
@@ -273,55 +264,52 @@ export default function DashboardPage() {
 
       {state === 'loaded' && data && (
         <>
-          <p className="dashboard-meta">
-            Generated {formatTime(data.generatedAt)} · last {data.lookbackMinutes} minute(s)
-          </p>
+          <RefreshBar
+            metaText={`Last updated ${formatDateTime(lastUpdatedAt?.toISOString() ?? null)} · showing last ${data.lookbackMinutes} minute(s)`}
+            isRefreshing={isRefreshing}
+            onRefresh={() => void loadDashboard(false)}
+            refreshError={refreshError}
+          />
 
           <div className="dashboard-grid">
-            <section className="card">
-              <h2>Latest Signals</h2>
+            <SectionCard title="Latest Signals">
               <SignalsTable
                 signals={data.signals}
                 emptyMessage="No signals detected in this window."
               />
-            </section>
+            </SectionCard>
 
-            <section className="card">
-              <h2>Top Smart Score Wallets</h2>
+            <SectionCard title="Top Smart Score Wallets">
               <WalletScoreTable
                 wallets={data.topWallets}
                 emptyMessage="No scored wallets yet — run analytics:scores."
               />
-            </section>
+            </SectionCard>
 
-            <section className="card">
-              <h2>Whale Trades</h2>
+            <SectionCard title="Whale Trades">
               <SignalsTable
                 signals={data.whaleTrades}
                 emptyMessage="No whale trades in this window."
               />
-            </section>
+            </SectionCard>
 
-            <section className="card">
-              <h2>Market Consensus</h2>
+            <SectionCard title="Market Consensus">
               <SignalsTable
                 signals={data.consensus}
                 emptyMessage="No consensus signals in this window."
               />
-            </section>
+            </SectionCard>
 
-            <section className="card">
-              <h2>Top Active Markets</h2>
+            <SectionCard title="Top Active Markets">
               <TopMarketsTable markets={data.topMarkets} />
-            </section>
+            </SectionCard>
 
-            <section className="card">
-              <h2>Active Smart Wallets</h2>
+            <SectionCard title="Active Smart Wallets">
               <WalletScoreTable
                 wallets={data.activeSmartWallets}
                 emptyMessage="No recently active wallets meet the smart-score bar."
               />
-            </section>
+            </SectionCard>
           </div>
         </>
       )}

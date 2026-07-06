@@ -1,7 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import {
+  formatDateTime,
+  formatDuration,
+  formatPercent,
+  formatScore,
+  formatUsd,
+} from '../../lib/format';
+import { TierBadge, type WalletScoreTier } from '../../components/Badge';
+import { EmptyState } from '../../components/EmptyState';
+import { SectionCard } from '../../components/SectionCard';
+import { RefreshBar } from '../../components/RefreshBar';
 
 /**
  * Same fallback/reasoning as `app/page.tsx`/`app/dashboard/page.tsx` —
@@ -11,7 +22,6 @@ import { useParams } from 'next/navigation';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4100';
 
 type LoadState = 'loading' | 'loaded' | 'error';
-type WalletScoreTier = 'elite' | 'strong' | 'watch' | 'weak' | 'unknown';
 
 /**
  * Every interface below is a hand-mirrored (and, where this page doesn't
@@ -130,33 +140,6 @@ interface WalletDetailResponse {
   activitySummary: ActivitySummary;
 }
 
-function formatUsd(value: string | null): string {
-  if (value === null) return '—';
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? `$${parsed.toFixed(2)}` : value;
-}
-
-function formatTime(iso: string | null): string {
-  if (iso === null) return '—';
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
-}
-
-function formatDuration(seconds: number | null): string {
-  if (seconds === null) return '—';
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  return `${hours}h ${minutes}m`;
-}
-
-function TierBadge({ tier }: { tier: WalletScoreTier }) {
-  return <span className={`badge tier-${tier}`}>{tier}</span>;
-}
-
-function EmptyState({ message }: { message: string }) {
-  return <p className="empty-state">{message}</p>;
-}
-
 function StatTable({ rows }: { rows: Array<[string, string | number]> }) {
   return (
     <table>
@@ -180,7 +163,7 @@ function SmartScoreCard({ score }: { score: WalletScoreSnapshot | null }) {
   return (
     <>
       <p className="score-hero">
-        <span className="score-value">{score.score}</span>
+        <span className="score-value">{formatScore(score.score)}</span>
         <TierBadge tier={score.tier} />
       </p>
       <StatTable
@@ -190,7 +173,7 @@ function SmartScoreCard({ score }: { score: WalletScoreSnapshot | null }) {
           ['Activity', score.components.activity],
           ['Recency', score.components.recency],
           ['Sample Size', score.components.sampleSize],
-          ['As Of', formatTime(score.snapshotAt)],
+          ['As Of', formatDateTime(score.snapshotAt)],
         ]}
       />
       {score.explanations.length > 0 && (
@@ -204,26 +187,43 @@ function SmartScoreCard({ score }: { score: WalletScoreSnapshot | null }) {
   );
 }
 
-function WalletStatsCard({ stats }: { stats: WalletStats }) {
+function WalletStatsCard({
+  stats,
+  profile,
+}: {
+  stats: WalletStats;
+  profile: WalletProfile | null;
+}) {
+  const rows: Array<[string, string | number]> = [
+    ['Total Trades', stats.totalTrades],
+    ['Total Markets', stats.totalMarkets],
+    ['Open Positions', stats.currentOpenPositions],
+    ['Closed Positions', stats.closedPositions],
+    ['Total Volume', formatUsd(stats.totalVolumeUsd)],
+    ['Realized PnL', formatUsd(stats.realizedPnlUsd)],
+    ['Unrealized PnL', formatUsd(stats.unrealizedPnlUsd)],
+    ['Avg Entry Price', formatUsd(stats.averageEntryPrice)],
+    ['Avg Exit Price', formatUsd(stats.averageExitPrice)],
+    ['Avg Hold Time', formatDuration(stats.averageHoldTimeSeconds)],
+    ['First Trade', formatDateTime(stats.firstTrade)],
+    ['Last Trade', formatDateTime(stats.lastTrade)],
+    ['Active Days', stats.activeDays],
+  ];
+
+  // Jupiter's own profile aggregate carries a win/loss breakdown this
+  // project doesn't otherwise reconstruct (WalletStats has no
+  // win-rate concept — see docs/smart-score.md §4) — shown here only
+  // when there's at least one resolved prediction to divide by.
+  if (profile && profile.predictionsCount > 0) {
+    rows.push(
+      ['Predictions', `${profile.correctPredictions}/${profile.predictionsCount}`],
+      ['Win Rate', formatPercent(profile.correctPredictions / profile.predictionsCount)],
+    );
+  }
+
   return (
     <>
-      <StatTable
-        rows={[
-          ['Total Trades', stats.totalTrades],
-          ['Total Markets', stats.totalMarkets],
-          ['Open Positions', stats.currentOpenPositions],
-          ['Closed Positions', stats.closedPositions],
-          ['Total Volume', formatUsd(stats.totalVolumeUsd)],
-          ['Realized PnL', formatUsd(stats.realizedPnlUsd)],
-          ['Unrealized PnL', formatUsd(stats.unrealizedPnlUsd)],
-          ['Avg Entry Price', formatUsd(stats.averageEntryPrice)],
-          ['Avg Exit Price', formatUsd(stats.averageExitPrice)],
-          ['Avg Hold Time', formatDuration(stats.averageHoldTimeSeconds)],
-          ['First Trade', formatTime(stats.firstTrade)],
-          ['Last Trade', formatTime(stats.lastTrade)],
-          ['Active Days', stats.activeDays],
-        ]}
-      />
+      <StatTable rows={rows} />
       {stats.usedProfileFallbackFor.length > 0 && (
         <p className="card-footnote">
           {stats.usedProfileFallbackFor.join(', ')} sourced from Jupiter&apos;s own profile — no own
@@ -243,8 +243,8 @@ function ActivitySummaryCard({ summary }: { summary: ActivitySummary }) {
         ['Volume (24h)', formatUsd(summary.volumeLast24h)],
         ['Volume (7d)', formatUsd(summary.volumeLast7d)],
         ['Active Markets', summary.activeMarkets],
-        ['First Seen', formatTime(summary.firstSeenAt)],
-        ['Last Seen', formatTime(summary.lastSeenAt)],
+        ['First Seen', formatDateTime(summary.firstSeenAt)],
+        ['Last Seen', formatDateTime(summary.lastSeenAt)],
       ]}
     />
   );
@@ -274,7 +274,7 @@ function MarketBreakdownTable({ markets }: { markets: MarketBreakdownEntry[] }) 
               <td>{formatUsd(market.volumeUsd)}</td>
               <td>{formatUsd(market.realizedPnlUsd)}</td>
               <td>{formatUsd(market.currentPositionUsd)}</td>
-              <td>{formatTime(market.lastActivityAt)}</td>
+              <td>{formatDateTime(market.lastActivityAt)}</td>
             </tr>
           ))}
         </tbody>
@@ -308,7 +308,7 @@ function PositionsTable({ positions }: { positions: Position[] }) {
               <td>{formatUsd(position.valueUsd)}</td>
               <td>{formatUsd(position.pnlUsd)}</td>
               <td>{position.lifecycleStatus ?? '—'}</td>
-              <td>{formatTime(position.openedAt)}</td>
+              <td>{formatDateTime(position.openedAt)}</td>
             </tr>
           ))}
         </tbody>
@@ -341,7 +341,7 @@ function RecentTradesTable({ trades }: { trades: Trade[] }) {
               <td>{trade.side}</td>
               <td>{formatUsd(trade.amountUsd)}</td>
               <td>{formatUsd(trade.priceUsd)}</td>
-              <td>{formatTime(trade.upstreamTimestamp)}</td>
+              <td>{formatDateTime(trade.upstreamTimestamp)}</td>
             </tr>
           ))}
         </tbody>
@@ -377,7 +377,7 @@ function RecentHistoryTable({ events }: { events: HistoryEvent[] }) {
               <td>{formatUsd(event.amountUsd)}</td>
               <td>{formatUsd(event.price)}</td>
               <td>{formatUsd(event.realizedPnlUsd)}</td>
-              <td>{formatTime(event.upstreamTimestamp)}</td>
+              <td>{formatDateTime(event.upstreamTimestamp)}</td>
             </tr>
           ))}
         </tbody>
@@ -402,8 +402,8 @@ function ScoreHistoryTable({ history }: { history: WalletScoreSnapshot[] }) {
         <tbody>
           {history.map((snapshot) => (
             <tr key={snapshot.snapshotAt}>
-              <td>{formatTime(snapshot.snapshotAt)}</td>
-              <td>{snapshot.score}</td>
+              <td>{formatDateTime(snapshot.snapshotAt)}</td>
+              <td>{formatScore(snapshot.score)}</td>
               <td>
                 <TierBadge tier={snapshot.tier} />
               </td>
@@ -422,35 +422,66 @@ export default function WalletDetailPage() {
   const [state, setState] = useState<LoadState>('loading');
   const [data, setData] = useState<WalletDetailResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
+  const mountedRef = useRef(true);
   useEffect(() => {
-    if (!walletPubkey) return;
-
-    let cancelled = false;
-    setState('loading');
-
-    fetch(`${API_BASE_URL}/api/wallets/${encodeURIComponent(walletPubkey)}`)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Wallet request failed (HTTP ${response.status})`);
-        }
-        return (await response.json()) as WalletDetailResponse;
-      })
-      .then((payload) => {
-        if (cancelled) return;
-        setData(payload);
-        setState('loaded');
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setErrorMessage(err instanceof Error ? err.message : 'Failed to load wallet');
-        setState('error');
-      });
-
+    mountedRef.current = true;
     return () => {
-      cancelled = true;
+      mountedRef.current = false;
     };
-  }, [walletPubkey]);
+  }, []);
+
+  const loadWallet = useCallback(
+    (isInitial: boolean) => {
+      if (!walletPubkey) return Promise.resolve();
+
+      if (isInitial) {
+        setState('loading');
+      } else {
+        setIsRefreshing(true);
+        setRefreshError(null);
+      }
+
+      return fetch(`${API_BASE_URL}/api/wallets/${encodeURIComponent(walletPubkey)}`)
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new Error(`Wallet request failed (HTTP ${response.status})`);
+          }
+          return (await response.json()) as WalletDetailResponse;
+        })
+        .then((payload) => {
+          if (!mountedRef.current) return;
+          setData(payload);
+          setState('loaded');
+          setLastUpdatedAt(new Date());
+        })
+        .catch((err: unknown) => {
+          if (!mountedRef.current) return;
+          const message = err instanceof Error ? err.message : 'Failed to load wallet';
+          if (isInitial) {
+            setErrorMessage(message);
+            setState('error');
+          } else {
+            setRefreshError(message);
+          }
+        })
+        .finally(() => {
+          if (!mountedRef.current) return;
+          if (!isInitial) setIsRefreshing(false);
+        });
+    },
+    [walletPubkey],
+  );
+
+  // Re-runs (as a fresh "initial" load, not a "refresh") whenever the URL's
+  // wallet pubkey itself changes — a different wallet is a different page,
+  // not a refresh of the same one, so old data is cleared, not kept.
+  useEffect(() => {
+    void loadWallet(true);
+  }, [loadWallet]);
 
   // A syntactically valid pubkey with no ingested data anywhere still
   // returns 200 with everything zeroed/empty (see wallets.ts's own doc
@@ -469,7 +500,7 @@ export default function WalletDetailPage() {
       <h1>Wallet</h1>
       <p className="wallet-pubkey">{walletPubkey}</p>
 
-      {state === 'loading' && <p className="empty-state">Loading wallet…</p>}
+      {state === 'loading' && <p className="loading-state">Loading wallet…</p>}
 
       {state === 'error' && (
         <p className="error-state">
@@ -479,53 +510,49 @@ export default function WalletDetailPage() {
 
       {state === 'loaded' && data && (
         <>
+          <RefreshBar
+            metaText={`Last updated ${formatDateTime(lastUpdatedAt?.toISOString() ?? null)}`}
+            isRefreshing={isRefreshing}
+            onRefresh={() => void loadWallet(false)}
+            refreshError={refreshError}
+          />
+
           {isUnknownWallet && (
-            <p className="empty-state">
-              No data found for this wallet yet — it may not have traded (or hasn&apos;t been
-              ingested) within this project&apos;s coverage.
-            </p>
+            <EmptyState message="No data found for this wallet yet — it may not have traded (or hasn't been ingested) within this project's coverage." />
           )}
 
           <div className="dashboard-grid">
-            <section className="card">
-              <h2>Smart Score</h2>
+            <SectionCard title="Smart Score">
               <SmartScoreCard score={data.latestSmartScore} />
-            </section>
+            </SectionCard>
 
-            <section className="card">
-              <h2>Wallet Stats</h2>
-              <WalletStatsCard stats={data.stats} />
-            </section>
+            <SectionCard title="Wallet Stats">
+              <WalletStatsCard stats={data.stats} profile={data.profile} />
+            </SectionCard>
 
-            <section className="card">
-              <h2>Activity Summary</h2>
+            <SectionCard title="Activity Summary">
               <ActivitySummaryCard summary={data.activitySummary} />
-            </section>
+            </SectionCard>
 
-            <section className="card">
-              <h2>Market Breakdown</h2>
+            <SectionCard title="Market Breakdown">
               <MarketBreakdownTable markets={data.marketBreakdown} />
-            </section>
+            </SectionCard>
 
-            <section className="card">
-              <h2>Positions</h2>
+            <SectionCard title="Positions">
               <PositionsTable positions={data.positions} />
-            </section>
+            </SectionCard>
 
-            <section className="card">
-              <h2>Recent Trades</h2>
+            <SectionCard title="Recent Trades">
               <RecentTradesTable trades={data.recentTrades} />
-            </section>
+            </SectionCard>
 
-            <section className="card">
-              <h2>Recent History</h2>
+            <SectionCard title="Recent History">
               <RecentHistoryTable events={data.recentHistory} />
-            </section>
+            </SectionCard>
 
-            <section className="card">
-              <h2>Score History</h2>
+            <SectionCard title="Score History">
               <ScoreHistoryTable history={data.smartScoreHistory} />
-            </section>
+            </SectionCard>
           </div>
         </>
       )}

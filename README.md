@@ -141,7 +141,11 @@ wallets in one view. `/wallet/:walletPubkey` (Phase 3.9) is a third page
 Score, stats, activity summary, market breakdown, positions, and recent
 trades/history/score-history for one wallet; every wallet pubkey shown on
 the live feed or dashboard links here. A shared nav bar (`app/layout.tsx`)
-links between the live feed and dashboard.
+links between the live feed and dashboard. The dashboard and wallet pages
+(Phase 3.10) both have a manual **Refresh** button and a "last updated"
+timestamp — a refresh keeps the last-good data on screen (rather than
+blanking to a loading state) and shows an inline error if it fails, so a
+failed background refresh never wipes out what was already showing.
 
 **Other ingestion jobs**, run on demand, each bounded and exits on its own
 (none of them loop forever unless you explicitly pass `--forever` to
@@ -288,6 +292,8 @@ src/
     utils/                     decimal/string/time helpers shared by core + ingestion
   frontend/
     app/                       Next.js App Router: layout.tsx (shared nav), page.tsx (live feed), dashboard/page.tsx, wallet/[walletPubkey]/page.tsx, globals.css
+      lib/format.ts            Shared formatting helpers (shortenPubkey, formatUsd/Score/Percent, formatDateTime/TimeOnly, formatDuration)
+      components/              Shared presentational components: Badge, SectionCard, EmptyState, WalletLink, RefreshBar
   shared/                      Reserved for backend+frontend-shared types/utilities (unused so far)
 ```
 

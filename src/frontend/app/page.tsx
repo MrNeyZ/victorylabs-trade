@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { formatTimeOnly, formatUsd } from './lib/format';
+import { WalletLink } from './components/WalletLink';
+import { EmptyState } from './components/EmptyState';
 
 /**
  * Falls back to the backend's own default port (see
@@ -41,20 +43,6 @@ interface SnapshotPayload {
   trades: Trade[];
 }
 
-function shortenPubkey(pubkey: string): string {
-  return pubkey.length > 10 ? `${pubkey.slice(0, 4)}…${pubkey.slice(-4)}` : pubkey;
-}
-
-function formatUsd(value: string): string {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? `$${parsed.toFixed(2)}` : value;
-}
-
-function formatTime(iso: string): string {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleTimeString();
-}
-
 const STATUS_LABEL: Record<ConnectionStatus, string> = {
   connecting: 'Connecting',
   live: 'Live',
@@ -74,6 +62,10 @@ function StatusBadge({ status }: { status: ConnectionStatus }) {
 export default function HomePage() {
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const [trades, setTrades] = useState<Trade[]>([]);
+  // Phase 3.10: this page has no refresh button (it's SSE-driven and
+  // always live) — this is purely "when did we last hear anything from
+  // the stream", shown next to the connection badge.
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     setStatus('connecting');
@@ -85,16 +77,19 @@ export default function HomePage() {
       const payload = JSON.parse((event as MessageEvent<string>).data) as SnapshotPayload;
       setTrades(payload.trades.slice(0, MAX_TRADES_IN_MEMORY));
       setStatus('live');
+      setLastUpdatedAt(new Date());
     });
 
     source.addEventListener('trade', (event) => {
       const trade = JSON.parse((event as MessageEvent<string>).data) as Trade;
       setTrades((prev) => [trade, ...prev].slice(0, MAX_TRADES_IN_MEMORY));
       setStatus('live');
+      setLastUpdatedAt(new Date());
     });
 
     source.addEventListener('heartbeat', () => {
       setStatus('live');
+      setLastUpdatedAt(new Date());
     });
 
     source.onerror = () => {
@@ -112,10 +107,15 @@ export default function HomePage() {
   return (
     <main>
       <h1>Live Trade Feed</h1>
-      <StatusBadge status={status} />
+      <div className="status-row">
+        <StatusBadge status={status} />
+        {lastUpdatedAt && (
+          <span className="page-meta">Updated {formatTimeOnly(lastUpdatedAt.toISOString())}</span>
+        )}
+      </div>
 
       {trades.length === 0 ? (
-        <p className="empty-state">Waiting for trades…</p>
+        <EmptyState message="Waiting for trades…" />
       ) : (
         <table>
           <thead>
@@ -132,17 +132,15 @@ export default function HomePage() {
           <tbody>
             {trades.map((trade) => (
               <tr key={trade.id} data-trade-id={trade.id}>
-                <td title={trade.ownerPubkey}>
-                  <Link href={`/wallet/${trade.ownerPubkey}`}>
-                    {shortenPubkey(trade.ownerPubkey)}
-                  </Link>
+                <td>
+                  <WalletLink pubkey={trade.ownerPubkey} />
                 </td>
                 <td className={`action-${trade.action}`}>{trade.action}</td>
                 <td>{trade.side}</td>
                 <td>{trade.eventTitle ?? trade.marketTitle ?? trade.marketId}</td>
                 <td>{formatUsd(trade.amountUsd)}</td>
                 <td>{formatUsd(trade.priceUsd)}</td>
-                <td>{formatTime(trade.upstreamTimestamp)}</td>
+                <td>{formatTimeOnly(trade.upstreamTimestamp)}</td>
               </tr>
             ))}
           </tbody>
