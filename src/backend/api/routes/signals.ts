@@ -1,11 +1,19 @@
 /**
- * GET /api/signals/recent — Smart Money Signals detected over a recent
- * trade window (Phase 3.5). Unlike `/api/scores/latest`, this is NOT a
- * read of a persisted table — signals are computed live, on every
- * request, from whatever trades/scores are already in Postgres (see
- * `docs/smart-money-signals.md` §5 for why persistence is deferred).
- * Still read-only: no ingestion, no writes, nothing computed here is
- * ever stored.
+ * GET /api/signals/recent — Smart Money Signals, Phase 3.5 + 3.6.
+ *
+ * Default (`source=persisted`): reads the `smart_money_signals` table
+ * (`signalsRepository.getRecentSignals`) — whatever
+ * `analytics:signals:persist` has already detected and written. A real
+ * read of a persisted table, same as `/api/scores/latest`.
+ *
+ * `source=live`: recomputes on this request, exactly like this route
+ * behaved before Phase 3.6 — fetches the current trade/score window and
+ * runs the pure detector fresh, nothing persisted or read from
+ * `smart_money_signals`.
+ *
+ * Still fully read-only either way: no ingestion is triggered, and the
+ * `live` mode never writes what it computes (only
+ * `analytics:signals:persist` writes to `smart_money_signals`).
  */
 import { Router } from 'express';
 import { gatherSignalDetectionInput } from '../../analytics/signals/gatherSignalDetectionInput.js';
@@ -13,6 +21,7 @@ import {
   detectSmartMoneySignals,
   type DetectSmartMoneySignalsConfig,
 } from '../../analytics/signals/detectSmartMoneySignals.js';
+import { getRecentSignals } from '../../db/repositories/signalsRepository.js';
 import { firstQueryString, parseLimitParam } from '../queryParams.js';
 
 export const signalsRouter = Router();
@@ -22,6 +31,8 @@ const MAX_LOOKBACK_MINUTES = 1440;
 const DEFAULT_MIN_SMART_SCORE = 35;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
+
+type SignalSource = 'persisted' | 'live';
 
 type ParsePositiveIntResult = { ok: true; value: number } | { ok: false; message: string };
 
@@ -46,7 +57,19 @@ function parsePositiveIntParam(
   return { ok: true, value: Math.min(parsed, maxValue) };
 }
 
+function isSignalSource(value: string): value is SignalSource {
+  return value === 'persisted' || value === 'live';
+}
+
 signalsRouter.get('/recent', async (req, res) => {
+  const sourceParam = firstQueryString(req.query['source']) ?? 'persisted';
+  if (!isSignalSource(sourceParam)) {
+    res
+      .status(400)
+      .json({ error: 'invalid_source', message: 'source must be one of: persisted, live' });
+    return;
+  }
+
   const lookbackResult = parsePositiveIntParam(
     req.query['lookbackMinutes'],
     'lookbackMinutes',
@@ -58,6 +81,28 @@ signalsRouter.get('/recent', async (req, res) => {
     return;
   }
 
+  const limitResult = parseLimitParam(req.query['limit'], DEFAULT_LIMIT, MAX_LIMIT);
+  if (!limitResult.ok) {
+    res.status(400).json({ error: 'invalid_limit', message: limitResult.message });
+    return;
+  }
+
+  if (sourceParam === 'persisted') {
+    const signals = await getRecentSignals({
+      lookbackMinutes: lookbackResult.value,
+      limit: limitResult.value,
+    });
+
+    res.json({
+      source: 'persisted',
+      lookbackMinutes: lookbackResult.value,
+      limit: limitResult.value,
+      signals,
+    });
+    return;
+  }
+
+  // source === 'live'
   const minSmartScoreRaw = firstQueryString(req.query['minSmartScore']);
   let minSmartScore = DEFAULT_MIN_SMART_SCORE;
   if (minSmartScoreRaw !== undefined) {
@@ -71,19 +116,15 @@ signalsRouter.get('/recent', async (req, res) => {
     minSmartScore = parsed;
   }
 
-  const limitResult = parseLimitParam(req.query['limit'], DEFAULT_LIMIT, MAX_LIMIT);
-  if (!limitResult.ok) {
-    res.status(400).json({ error: 'invalid_limit', message: limitResult.message });
-    return;
-  }
-
   const input = await gatherSignalDetectionInput(lookbackResult.value);
   const detectorConfig: DetectSmartMoneySignalsConfig = { minSmartScore };
   const signals = detectSmartMoneySignals(input, detectorConfig).slice(0, limitResult.value);
 
   res.json({
+    source: 'live',
     lookbackMinutes: lookbackResult.value,
     minSmartScore,
+    limit: limitResult.value,
     tradesConsidered: input.trades.length,
     signals,
   });

@@ -1,14 +1,19 @@
 # Smart Money Signals
 
-Phase 3.5. The first "something interesting just happened" layer on top
-of Smart Score (`docs/smart-score.md`, Phase 3.2) and its persisted
+Phase 3.5/3.6. The first "something interesting just happened" layer on
+top of Smart Score (`docs/smart-score.md`, Phase 3.2) and its persisted
 history (Phase 3.3). Where `wallet_score_snapshots` answers "is this
 wallet good", this phase answers "did a good wallet (or a market) just do
-something worth noticing" — computed live over a recent trade window, not
-persisted (see §5 for why).
+something worth noticing".
+
+Phase 3.5 built pure detection, computed live on every call, nothing
+persisted. Phase 3.6 (§6) added a `smart_money_signals` table and a
+persist job, and made `GET /api/signals/recent` read from it by default —
+live recomputation is still available (`?source=live`), it's just no
+longer the default.
 
 Backend-analytics only, per this phase's brief — no frontend, no
-deployment, no persisted signals table, no alerting yet.
+deployment, no alerting yet.
 
 ---
 
@@ -129,7 +134,7 @@ tier `"unknown"` if the wallet has never been scored).
 
 ## 4. Surfaces
 
-### 4.1 CLI — `npm run analytics:signals`
+### 4.1 CLI — `npm run analytics:signals` (detect only, no writes)
 
 ```bash
 npm run analytics:signals
@@ -141,52 +146,83 @@ Defaults: `lookbackMinutes=60`, `minSmartScore=35`, `consensusWallets=3`,
 `ANALYTICS_SIGNALS_MIN_SMART_SCORE`/`ANALYTICS_SIGNALS_CONSENSUS_WALLETS`/
 `ANALYTICS_SIGNALS_WHALE_USD` env vars, CLI flags take precedence). Prints
 one summary line then the full `Signal[]` as JSON. **No database writes**
-— read-only, same as `analytics:leaderboard`.
+— read-only, same as `analytics:leaderboard`. See §6.2 for
+`analytics:signals:persist`, the write-capable sibling of this command.
 
 ### 4.2 API — `GET /api/signals/recent`
 
-Read-only, computed live on every request (not a cached/persisted read
-like `/api/scores/latest`).
+Read-only either way (`source=persisted` reads a table; `source=live`
+recomputes — neither one writes anything).
 
 | Param | Default | Notes |
 |---|---|---|
-| `lookbackMinutes` | 60 | Max 1440 (24h). |
-| `minSmartScore` | 35 | Any finite number. |
-| `limit` | 50 | Max 200 — applied to the final sorted signal list, not to the trades considered. |
+| `source` | `persisted` | `persisted` reads `smart_money_signals` (§6); `live` recomputes on this request, same behavior this route had before Phase 3.6. |
+| `lookbackMinutes` | 60 | Max 1440 (24h). Filters `occurred_at` in both modes. |
+| `minSmartScore` | 35 | Any finite number. **`live` mode only** — see note below. |
+| `limit` | 50 | Max 200 — caps the returned signal list (not the trades considered, in `live` mode). |
 
-Response:
+`source=persisted` response:
 
 ```jsonc
 {
+  "source": "persisted",
+  "lookbackMinutes": 60,
+  "limit": 50,
+  "signals": [ /* PersistedSignal[], most-recent occurredAt first */ ]
+}
+```
+
+`source=live` response (unchanged from Phase 3.5, plus the new `source`/
+`limit` echo fields):
+
+```jsonc
+{
+  "source": "live",
   "lookbackMinutes": 60,
   "minSmartScore": 35,
+  "limit": 50,
   "tradesConsidered": 214,
   "signals": [ /* Signal[], most-recent occurredAt first */ ]
 }
 ```
 
-`consensusWallets`/`whaleUsd` are not exposed as query params on this
-route (kept at their defaults, 3 and 1000) — only the two params the
-brief for this phase actually calls out (`lookbackMinutes`,
-`minSmartScore`) are wired through the API; the CLI is the tool for
-exploring the other two.
+**Why `minSmartScore` only appears in the `live` response**: in
+`persisted` mode, `minSmartScore` was already applied — at whatever value
+`analytics:signals:persist` used when each row was written — and can't be
+meaningfully re-applied at read time (a persisted `market_consensus`
+signal's `walletPubkeys` is already the qualifying subset; there's no
+per-signal "score" column to filter a mixed-wallet signal against, only
+`scoreContext`, which is per-wallet). `source=persisted` simply ignores a
+`minSmartScore` query param if one is passed, rather than erroring — a
+real per-wallet-score filter on already-persisted signals would need to
+query into `scoreContext` itself, which is a narrower future feature
+(§7), not a straightforward column filter. `consensusWallets`/`whaleUsd`
+were never exposed as query params on this route either way (kept at
+their defaults in `live` mode; baked into whatever was persisted in
+`persisted` mode) — the CLI is the tool for exploring those two.
 
 ## 5. Limitations
 
-- **Not persisted.** Every call to the CLI or `/api/signals/recent`
-  recomputes signals from scratch over the current window — there is no
-  `signals` table, no history, no "signals I've already seen" state. Two
-  requests a minute apart over an overlapping window can (and will)
-  report the same underlying trade again.
-- **No deduplication/alerting.** Nothing pushes a signal anywhere
-  (webhook, log, notification) — this phase is detection only, on
-  request.
+- **No scheduled persistence.** `analytics:signals:persist` (§6) is still
+  a bounded, manually-invoked CLI job, same constraint as every other job
+  in this project (see `docs/mvp-status.md`) — the `smart_money_signals`
+  table only stays fresh if someone (or a future cron-style scheduler,
+  still not built) re-runs it.
+- **No deduplication beyond exact-id collision.** Idempotency (§6.3)
+  only prevents the *exact same* signal (same type/market/side/trade or
+  wallet-set) from being inserted twice. Two structurally different
+  signals about the same real-world event (e.g. `smart_wallet_trade` and
+  `whale_trade` on the same trade) are NOT deduplicated against each
+  other — deliberately (see §1, "not a duplicate of the others").
+- **No alerting.** Nothing pushes a persisted signal anywhere (webhook,
+  log, notification) — persistence just means "queryable later", not
+  "someone gets notified".
 - **Same ingestion-coverage caveat as everywhere else** in this project:
   a signal can only fire on a trade this project actually ingested (the
   live `/trades` poller) and a wallet actually scored
   (`analytics:scores` must have run for that wallet at some point). A
   perfectly real smart-money trade this project never polled produces no
-  signal.
+  signal, persisted or otherwise.
 - **`market_consensus` has no cross-market correlation.** Each market+side
   is judged independently; a wallet spreading conviction across several
   closely-related markets (e.g. different strikes of the same event)
@@ -198,28 +234,110 @@ exploring the other two.
   making one $1,000 trade and then never trading again looks identical
   to a wallet that does this daily — no rate-of-whale-activity signal
   exists yet.
+- **`persisted` reads can lag `live` reads.** Whatever
+  `analytics:signals:persist` last detected is what `source=persisted`
+  returns — a genuinely new signal that would show up under
+  `source=live` right now isn't in `smart_money_signals` until the
+  persist job runs again.
 
-## 6. Future persistence/alerts plan
+## 6. Persistence (Phase 3.6)
 
-Not built this phase; the natural next steps, roughly in order:
+### 6.1 Schema
 
-1. **A `smart_money_signals` table**, same shape as
-   `wallet_score_snapshots` (Phase 3.3) — persist each detected signal
-   keyed by its deterministic `id` (`ON CONFLICT (id) DO NOTHING`, same
-   idempotency pattern already used everywhere else in this project) so
-   re-running detection over an overlapping window doesn't duplicate
-   signals already recorded.
-2. **A scheduled detection job** (still no PM2/Docker per this project's
+`smart_money_signals` (`src/backend/db/migrations/004_smart_money_signals.sql`):
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `TEXT PRIMARY KEY` | The detector's own deterministic `Signal.id` (§2.4) — not a surrogate key. This is what makes `ON CONFLICT (id) DO NOTHING` work as idempotency (§6.3). |
+| `type` | `TEXT NOT NULL` (`CHECK` enum) | One of the four signal types (§1). |
+| `severity` | `TEXT NOT NULL` (`CHECK` enum) | `low` \| `medium` \| `high`. |
+| `wallet_pubkeys` | `TEXT[] NOT NULL` | Every wallet involved — one for single-trade signal types, 3+ for `market_consensus`. |
+| `market_id` | `TEXT` (nullable) | Nullable in the schema even though every signal type detected so far always has one — future-proofing for a non-market-scoped signal type, not a gap in today's data. |
+| `side` | `TEXT` (nullable, `CHECK` enum) | Same nullability reasoning as `market_id`. |
+| `event_title` | `TEXT` (nullable) | |
+| `amount_usd` | `NUMERIC` (nullable) | |
+| `score_context` | `JSONB NOT NULL` | `Signal.scoreContext` verbatim. |
+| `occurred_at` | `TIMESTAMPTZ NOT NULL` | |
+| `explanation` | `TEXT NOT NULL` | |
+| `raw` | `JSONB NOT NULL` | The full `Signal` object as detected, verbatim — a safety net against any field not (yet) promoted to its own column, same role `raw` plays on every ingestion-facing table since `001_init.sql`. Written, never read back (same convention as every other `raw` column in this project). |
+| `inserted_at` | `TIMESTAMPTZ NOT NULL DEFAULT now()` | Row-write bookkeeping, distinct from `occurred_at`'s logical trade/consensus time. |
+
+Indexed on `occurred_at DESC` (recency reads), `type`, `severity`,
+`market_id` (btree — each is a plain equality filter), and
+`wallet_pubkeys` (**GIN**, not btree — an array column queried for
+containment, `WHERE wallet_pubkeys @> ARRAY[$1]`, needs a GIN index over
+the array's elements; a btree index would only help exact-whole-array
+equality, which nothing here needs).
+
+### 6.2 The persist job
+
+`src/backend/jobs/persistSmartMoneySignals.ts` (`npm run
+analytics:signals:persist`) has the exact same configuration surface as
+`analytics:signals` (§4.1: `lookbackMinutes`/`minSmartScore`/
+`consensusWallets`/`whaleUsd`, same CLI flags and env vars) plus one more
+step: it calls `signalsRepository.upsertSignals` on whatever the detector
+returns. Output:
+
+```
+[analytics:signals:persist] lookbackMinutes=60 minSmartScore=35 consensusWallets=3 whaleUsd=1000
+[analytics:signals:persist] fetched=214 detected=6 inserted=6 duplicates=0 durationMs=812
+```
+
+`fetched` = trades considered, `detected` = signals the pure detector
+returned, `inserted` = genuinely new rows, `duplicates` = detected
+signals whose `id` already existed (see §6.3). Like every other analytics
+job in this project: no Jupiter API calls, bounded one-shot run, no loop,
+no daemon, no PM2.
+
+### 6.3 Idempotency
+
+Every `Signal.id` is a deterministic, content-derived string (§2.4) — no
+`Date.now()`/`Math.random()` anywhere in the detector. `upsertSignals` is
+`ON CONFLICT (id) DO NOTHING`, so running `analytics:signals:persist`
+twice over an overlapping (or identical) lookback window re-detects the
+same underlying signals but inserts 0 new rows for any signal already
+persisted. This is a different mechanism from
+`wallet_score_snapshots`/`analytics:scores`'s idempotency (there, a
+5-minute-bucketed `snapshotAt` timestamp is what collides on re-run;
+here, the signal's own content is) but the same outcome: re-running the
+job is always safe, never produces duplicate rows.
+
+Verified live (Phase 3.6): two back-to-back `analytics:signals:persist`
+runs with lowered thresholds (to force real signals in a small throwaway
+dataset) detected the same signal set both times; the first inserted N
+new rows, the second inserted 0 (all N reported as duplicates).
+
+### 6.4 Repository
+
+`src/backend/db/repositories/signalsRepository.ts`:
+
+- `upsertSignals(signals)` — bulk insert, `ON CONFLICT (id) DO NOTHING`,
+  returns the count of genuinely new rows.
+- `getRecentSignals({ lookbackMinutes, limit, type, severity, marketId })`
+  — read path for `GET /api/signals/recent?source=persisted` (§4.2).
+  Returns `PersistedSignal[]`, a variant of `Signal` with `marketId`/
+  `side`/`amountUsd` typed nullable (matching the schema's honest
+  nullability — see §6.1) rather than forced to a fake non-null default.
+
+## 7. Future work
+
+Not built yet; the natural next steps, roughly in order:
+
+1. **A scheduled persist job** (still no PM2/Docker per this project's
    standing constraints — see `docs/mvp-status.md`) that runs
-   `analytics:signals`-equivalent logic on an interval and writes new
-   signals as they're found, instead of only computing on demand.
-3. **`GET /api/signals/history`** once persisted, mirroring
-   `getWalletScoreHistory`'s read pattern — signals over time, not just
-   "right now".
-4. **Outbound alerting** (webhook/Slack/Discord) gated on severity —
-   deliberately out of scope until persistence exists, so the same
-   signal isn't re-alerted every time someone happens to call the
-   detector over an overlapping window.
+   `analytics:signals:persist` on an interval, instead of only on manual
+   invocation.
+2. **`GET /api/signals/history`** for a single wallet or market, mirroring
+   `getWalletScoreHistory`'s read pattern — signals over time for one
+   entity, not just "everything recent".
+3. **A `scoreContext`-aware filter** for `source=persisted` — letting
+   `minSmartScore` mean something for persisted reads (e.g. "only
+   persisted signals where at least one `scoreContext` entry meets this
+   score"), addressing the gap noted in §4.2.
+4. **Outbound alerting** (webhook/Slack/Discord) gated on severity, now
+   that persistence exists to prevent the same signal from being
+   re-alerted every time someone calls a read endpoint over an
+   overlapping window.
 5. **Signal-quality feedback loop** — once real usage exists, track
    which signals actually preceded a market resolving favorably, to
    start calibrating severity thresholds against outcomes instead of

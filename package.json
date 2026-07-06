@@ -24,6 +24,7 @@
     "analytics:leaderboard": "tsx src/backend/jobs/analyticsLeaderboard.ts",
     "analytics:scores": "tsx src/backend/jobs/computeWalletScores.ts",
     "analytics:signals": "tsx src/backend/jobs/analyticsSignals.ts",
+    "analytics:signals:persist": "tsx src/backend/jobs/persistSmartMoneySignals.ts",
     "backend:dev": "tsx watch src/backend/api/server.ts",
     "frontend:dev": "next dev src/frontend",
     "dev:backend": "npm run backend:dev",
