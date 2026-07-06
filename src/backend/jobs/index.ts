@@ -2,7 +2,8 @@
 // Every file in this directory (ingestTradesOnce.ts, pollTrades.ts,
 // ingestRecentWalletHistory.ts, ingestRankings.ts,
 // ingestRecentWalletPositions.ts, analyticsWallet.ts,
-// analyticsLeaderboard.ts) is a CLI entry point that runs immediately on
-// import — intentionally NOT re-exported from this barrel, same reason
-// src/backend/db/index.ts excludes migrate.ts.
+// analyticsLeaderboard.ts, computeWalletScores.ts, analyticsSignals.ts)
+// is a CLI entry point that runs immediately on import — intentionally
+// NOT re-exported from this barrel, same reason src/backend/db/index.ts
+// excludes migrate.ts.
 export {};

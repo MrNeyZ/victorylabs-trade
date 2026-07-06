@@ -36,6 +36,7 @@ import { tradesRouter } from './routes/trades.js';
 import { walletsRouter } from './routes/wallets.js';
 import { leaderboardsRouter } from './routes/leaderboards.js';
 import { scoresRouter } from './routes/scores.js';
+import { signalsRouter } from './routes/signals.js';
 
 const DEFAULT_PORT = 4100;
 
@@ -59,6 +60,7 @@ export function createServer(): Express {
   app.use('/api/wallets', walletsRouter);
   app.use('/api/leaderboards', leaderboardsRouter);
   app.use('/api/scores', scoresRouter);
+  app.use('/api/signals', signalsRouter);
 
   app.use((_req, res) => {
     res.status(404).json({ error: 'not_found' });

@@ -130,6 +130,39 @@ export async function getRecentActiveWallets(
   return result.rows.map((row) => row.owner_pubkey);
 }
 
+export interface GetRecentTradesWithinMinutesOptions {
+  /** Default: 2000 — generous enough for a busy `lookbackMinutes` window without being unbounded. */
+  limit?: number;
+}
+
+/**
+ * Signal-detection read path (`src/backend/analytics/signals/`,
+ * Phase 3.5) — every trade with `upstream_timestamp` within the last
+ * `minutes`, most-recent-first. Filters on `upstream_timestamp` (when the
+ * trade actually happened), not `observed_at` (when we polled it),
+ * matching how `recentTrades`/`WalletStats.lastTrade` already define
+ * "recent" elsewhere in this project — unlike `getRecentActiveWallets`,
+ * which deliberately uses `observed_at` for its own reconciliation
+ * purpose.
+ */
+export async function getRecentTradesWithinMinutes(
+  minutes: number,
+  options: GetRecentTradesWithinMinutesOptions = {},
+): Promise<Trade[]> {
+  const limit = options.limit ?? 2000;
+  const pool = getPool();
+  const result = await pool.query<TradeRow>(
+    `SELECT id, owner_pubkey, market_id, event_id, action, side, amount_usd, price_usd,
+            event_title, market_title, message, is_team_market, upstream_timestamp, observed_at
+     FROM trades
+     WHERE upstream_timestamp >= now() - make_interval(mins => $1)
+     ORDER BY upstream_timestamp DESC
+     LIMIT $2`,
+    [minutes, limit],
+  );
+  return result.rows.map(rowToTrade);
+}
+
 interface TradeRow {
   id: string;
   owner_pubkey: string;

@@ -3,3 +3,4 @@
 // over what src/backend/db/repositories/ already has.
 export * from './walletStats/index.js';
 export * from './scoring/index.js';
+export * from './signals/index.js';

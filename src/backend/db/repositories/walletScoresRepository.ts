@@ -215,3 +215,34 @@ export async function getWalletScoreHistory(
   );
   return result.rows.map(rowToResult);
 }
+
+/**
+ * Signal-detection read path (`src/backend/analytics/signals/`, Phase
+ * 3.5) — the most recent snapshot per wallet for a specific set of
+ * wallets (typically "every wallet that traded in the last N minutes"),
+ * in one query rather than one `getWalletScoreHistory` call per wallet.
+ *
+ * Unlike `getLatestWalletScores`, this does NOT require every returned
+ * row to share the same `snapshot_at` bucket — each wallet's own latest
+ * snapshot is returned independently (`DISTINCT ON`), since a wallet that
+ * traded just now may not have been scored in the most recent
+ * `analytics:scores` run yet, and signal detection cares about "the
+ * latest score we have for this wallet", not "wallets scored in lockstep
+ * this round". Wallets with no snapshot at all are simply absent from the
+ * result — callers treat a missing entry as "unscored", not zero.
+ */
+export async function getLatestScoresForWallets(
+  walletPubkeys: string[],
+): Promise<WalletScoreSnapshotResult[]> {
+  if (walletPubkeys.length === 0) return [];
+
+  const pool = getPool();
+  const result = await pool.query<WalletScoreSnapshotRow>(
+    `SELECT DISTINCT ON (wallet_pubkey) ${SELECT_COLUMNS}
+     FROM wallet_score_snapshots
+     WHERE wallet_pubkey = ANY($1)
+     ORDER BY wallet_pubkey, snapshot_at DESC`,
+    [walletPubkeys],
+  );
+  return result.rows.map(rowToResult);
+}
