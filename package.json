@@ -18,7 +18,8 @@
     "ingest:trades:once": "tsx src/backend/jobs/ingestTradesOnce.ts",
     "ingest:trades:poll": "tsx src/backend/jobs/pollTrades.ts",
     "ingest:history:recent": "tsx src/backend/jobs/ingestRecentWalletHistory.ts",
-    "ingest:rankings": "tsx src/backend/jobs/ingestRankings.ts"
+    "ingest:rankings": "tsx src/backend/jobs/ingestRankings.ts",
+    "ingest:positions:recent": "tsx src/backend/jobs/ingestRecentWalletPositions.ts"
   },
   "dependencies": {
     "pg": "^8.22.0"

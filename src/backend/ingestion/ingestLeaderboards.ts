@@ -15,6 +15,12 @@
  *     `(wallet_pubkey, period, snapshot_at)` and get skipped, instead of
  *     each run creating a new near-duplicate row — this project's own
  *     idempotency mechanism, not an upstream concept.
+ *
+ * Rate-limit handling (429s) is no longer a fixed inter-request sleep
+ * here (Phase 2.5) — as of Phase 2.6 it's delegated entirely to
+ * `JupiterPredictionClient`'s own retry/backoff (reads `x-ratelimit-*`
+ * headers, bounded retries, never hides a final failure). This file just
+ * calls the client normally now.
  */
 import { JupiterPredictionClient } from '../services/jupiterPredictionClient.js';
 import type { JupiterLeaderboardPeriod } from '../types/jupiter.js';
@@ -25,21 +31,12 @@ import {
   finishIngestionRun,
 } from '../db/repositories/ingestionRunsRepository.js';
 import { clientOptionsFromEnv } from './ingestTradesOnce.js';
-import { floorToBucket, sleep } from '../utils/time.js';
+import { floorToBucket } from '../utils/time.js';
 
 const ENDPOINT_NAME = 'leaderboards';
 const ALL_PERIODS: JupiterLeaderboardPeriod[] = ['all_time', 'weekly', 'monthly'];
 
 export const SNAPSHOT_BUCKET_MS = 5 * 60 * 1000;
-
-/**
- * Spacing between the 3 sequential period calls below — not retry/backoff
- * logic, just simple pacing to stay under the documented keyless rate
- * limit (~0.5-1.25 req/s, see docs/jupiter-prediction-discovery.md §7.3
- * and docs/rest-api-capabilities.md §4) instead of bursting all 3 calls
- * back to back.
- */
-const INTER_REQUEST_DELAY_MS = 1100;
 
 interface PeriodStats {
   fetched: number;
@@ -75,8 +72,7 @@ export async function ingestLeaderboards(
       monthly: { fetched: 0, upserted: 0 },
     };
 
-    for (const [index, period] of ALL_PERIODS.entries()) {
-      if (index > 0) await sleep(INTER_REQUEST_DELAY_MS);
+    for (const period of ALL_PERIODS) {
       const rows = await client.getLeaderboards({ period, metric: 'pnl' });
       const inputs = rows.map((raw, index) => ({
         snapshot: normalizeLeaderboardRow(raw, index + 1, snapshotAt),

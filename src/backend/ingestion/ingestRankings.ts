@@ -5,21 +5,18 @@
  * call). Bounded by wallet count only — no forever mode, no daemon.
  * See `src/backend/jobs/ingestRankings.ts` for the CLI entry point
  * (`npm run ingest:rankings`).
+ *
+ * Rate-limit handling (429s) is no longer a fixed inter-request sleep
+ * here (Phase 2.5) -- as of Phase 2.6 it's delegated entirely to
+ * JupiterPredictionClient's own retry/backoff. This file just calls the
+ * client normally now.
  */
 import { JupiterPredictionClient } from '../services/jupiterPredictionClient.js';
 import { ingestLeaderboards, type IngestLeaderboardsResult } from './ingestLeaderboards.js';
 import { ingestWalletProfile, type IngestWalletProfileResult } from './ingestWalletProfile.js';
 import { clientOptionsFromEnv } from './ingestTradesOnce.js';
-import { sleep } from '../utils/time.js';
 
 export const DEFAULT_TOP_N = 20;
-
-/**
- * Spacing between sequential per-wallet profile calls — not retry/backoff
- * logic, just simple pacing to stay under the documented keyless rate
- * limit (same reasoning as ingestLeaderboards.ts's INTER_REQUEST_DELAY_MS).
- */
-const INTER_REQUEST_DELAY_MS = 1100;
 
 export interface IngestRankingsOptions {
   /** How many top (by all-time realized PnL) wallets to ingest profiles for. Default: 20. */
@@ -59,8 +56,7 @@ export async function ingestRankings(
   let succeeded = 0;
   let failed = 0;
 
-  for (const [index, ownerPubkey] of topWallets.entries()) {
-    if (index > 0) await sleep(INTER_REQUEST_DELAY_MS);
+  for (const ownerPubkey of topWallets) {
     try {
       const result = await ingestWalletProfile(ownerPubkey, client);
       outcomes.push({ ownerPubkey, ok: true, result });

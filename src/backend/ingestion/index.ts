@@ -6,3 +6,5 @@ export * from './ingestRecentWalletHistory.js';
 export * from './ingestWalletProfile.js';
 export * from './ingestLeaderboards.js';
 export * from './ingestRankings.js';
+export * from './ingestPositionsForWallet.js';
+export * from './ingestRecentWalletPositions.js';
