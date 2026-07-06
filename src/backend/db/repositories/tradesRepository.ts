@@ -203,3 +203,57 @@ export async function getRecentTrades(options: GetRecentTradesOptions = {}): Pro
 
   return result.rows.map(rowToTrade);
 }
+
+export interface GetTradesSinceOptions {
+  marketId?: string;
+  ownerPubkey?: string;
+  /** Safety cap so a stream resuming after a long gap can't return unbounded rows in one poll. Default: 500. */
+  limit?: number;
+}
+
+/**
+ * Read path for the SSE stream (`GET /api/trades/stream`). Returns trades
+ * with `observed_at` strictly greater than `sinceObservedAt`, ordered
+ * oldest-first — the caller streams them in that order and advances its
+ * cursor to the last row's `observedAt`.
+ *
+ * Cursors on `observed_at` (our own ingestion wall-clock), not
+ * `upstream_timestamp`: a trade could have an older upstream timestamp
+ * but only just have been ingested, and `observed_at` is what "have I
+ * already sent this to the client" actually needs to track. In practice
+ * for this table the two stay correlated anyway — `trades` is populated
+ * only by the live `/trades` poller, with no historical backfill path
+ * that could insert an old row with a much newer `observed_at` out of
+ * order relative to what a `getRecentTrades` snapshot already returned.
+ */
+export async function getTradesSince(
+  sinceObservedAt: Date,
+  options: GetTradesSinceOptions = {},
+): Promise<Trade[]> {
+  const limit = options.limit ?? 500;
+  const pool = getPool();
+
+  const conditions: string[] = ['observed_at > $1'];
+  const params: unknown[] = [sinceObservedAt];
+  if (options.marketId) {
+    params.push(options.marketId);
+    conditions.push(`market_id = $${params.length}`);
+  }
+  if (options.ownerPubkey) {
+    params.push(options.ownerPubkey);
+    conditions.push(`owner_pubkey = $${params.length}`);
+  }
+  params.push(limit);
+
+  const result = await pool.query<TradeRow>(
+    `SELECT id, owner_pubkey, market_id, event_id, action, side, amount_usd, price_usd,
+            event_title, market_title, message, is_team_market, upstream_timestamp, observed_at
+     FROM trades
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY observed_at ASC
+     LIMIT $${params.length}`,
+    params,
+  );
+
+  return result.rows.map(rowToTrade);
+}
