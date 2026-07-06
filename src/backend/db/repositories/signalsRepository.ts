@@ -260,3 +260,60 @@ export async function getWalletSignalCounts(
 
   return Array.from(countsByWallet.values());
 }
+
+export interface MarketSignalCounts {
+  marketId: string;
+  whaleTradeCount: number;
+  marketConsensusCount: number;
+}
+
+interface MarketSignalCountRow {
+  market_id: string;
+  type: SignalType;
+  signal_count: string;
+}
+
+/**
+ * Trending-market read path (`src/backend/analytics/trendingMarkets/`,
+ * Phase 4.2) — the market-scoped counterpart to
+ * `getWalletSignalCounts`. Simpler than that function: `market_id` is a
+ * plain scalar column (unlike `wallet_pubkeys`, an array), so this is a
+ * direct `GROUP BY`, no `unnest`/overlap check needed.
+ *
+ * Markets with zero of either type are still present in the result with
+ * both counts at `0`, same "no fallback needed at the call site"
+ * convention `getWalletSignalCounts` follows.
+ */
+export async function getMarketSignalCounts(
+  marketIds: string[],
+  lookbackMinutes: number,
+): Promise<MarketSignalCounts[]> {
+  if (marketIds.length === 0) return [];
+
+  const countsByMarket = new Map<string, MarketSignalCounts>(
+    marketIds.map((marketId) => [
+      marketId,
+      { marketId, whaleTradeCount: 0, marketConsensusCount: 0 },
+    ]),
+  );
+
+  const pool = getPool();
+  const result = await pool.query<MarketSignalCountRow>(
+    `SELECT market_id, type, COUNT(*)::text AS signal_count
+     FROM smart_money_signals
+     WHERE market_id = ANY($1)
+       AND type = ANY($2)
+       AND occurred_at >= now() - make_interval(mins => $3)
+     GROUP BY market_id, type`,
+    [marketIds, ['whale_trade', 'market_consensus'], lookbackMinutes],
+  );
+
+  for (const row of result.rows) {
+    const entry = countsByMarket.get(row.market_id);
+    if (!entry) continue;
+    if (row.type === 'whale_trade') entry.whaleTradeCount = Number(row.signal_count);
+    if (row.type === 'market_consensus') entry.marketConsensusCount = Number(row.signal_count);
+  }
+
+  return Array.from(countsByMarket.values());
+}

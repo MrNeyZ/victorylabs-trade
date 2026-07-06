@@ -90,6 +90,27 @@ interface TrendingWalletsResponse {
   wallets: TrendingWallet[];
 }
 
+/** Mirrors the backend's `TrendingMarket` (`src/backend/analytics/trendingMarkets/computeTrendingMarketScore.ts`) — from a separate endpoint (`GET /api/trending/markets`, Phase 4.2), fetched the same way `TrendingWallet` is. */
+interface TrendingMarket {
+  marketId: string;
+  eventTitle: string | null;
+  trendingScore: number;
+  reason: string[];
+  recentTradeCount: number;
+  recentVolumeUsd: string;
+  uniqueWallets: number;
+  smartWallets: number;
+  whaleSignalCount: number;
+  consensusSignalCount: number;
+  lastActivityAt: string;
+}
+
+interface TrendingMarketsResponse {
+  lookbackMinutes: number;
+  limit: number;
+  markets: TrendingMarket[];
+}
+
 function SignalsTable({
   signals,
   emptyMessage,
@@ -244,10 +265,54 @@ function TrendingWalletsTable({ wallets }: { wallets: TrendingWallet[] }) {
   );
 }
 
+function TrendingMarketsTable({ markets }: { markets: TrendingMarket[] }) {
+  if (markets.length === 0) {
+    return <EmptyState message="No trending markets in this window." />;
+  }
+
+  return (
+    <div className="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Market / Event</th>
+            <th>Trending Score</th>
+            <th>Trades</th>
+            <th>Volume</th>
+            <th>Wallets</th>
+            <th>Smart Wallets</th>
+            <th>Whale</th>
+            <th>Consensus</th>
+            <th>Last Activity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {markets.map((market, index) => (
+            <tr key={market.marketId} title={market.reason.join(' ')}>
+              <td>{index + 1}</td>
+              <td title={market.marketId}>{market.eventTitle ?? market.marketId}</td>
+              <td>{formatScore(market.trendingScore)}</td>
+              <td>{market.recentTradeCount}</td>
+              <td>{formatUsd(market.recentVolumeUsd)}</td>
+              <td>{market.uniqueWallets}</td>
+              <td>{market.smartWallets}</td>
+              <td>{market.whaleSignalCount}</td>
+              <td>{market.consensusSignalCount}</td>
+              <td>{formatDateTime(market.lastActivityAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [state, setState] = useState<LoadState>('loading');
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [trendingWallets, setTrendingWallets] = useState<TrendingWallet[]>([]);
+  const [trendingMarkets, setTrendingMarkets] = useState<TrendingMarket[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
@@ -291,11 +356,24 @@ export default function DashboardPage() {
       return (await response.json()) as TrendingWalletsResponse;
     });
 
-    return Promise.all([dashboardRequest, trendingRequest])
-      .then(([dashboardPayload, trendingPayload]) => {
+    // Same reasoning as `trendingRequest` above — a separate endpoint
+    // (`GET /api/trending/markets`, Phase 4.2), fetched alongside the
+    // other two and folded into this one page's refresh cycle.
+    const trendingMarketsRequest = fetch(`${API_BASE_URL}/api/trending/markets`).then(
+      async (response) => {
+        if (!response.ok) {
+          throw new Error(`Trending markets request failed (HTTP ${response.status})`);
+        }
+        return (await response.json()) as TrendingMarketsResponse;
+      },
+    );
+
+    return Promise.all([dashboardRequest, trendingRequest, trendingMarketsRequest])
+      .then(([dashboardPayload, trendingPayload, trendingMarketsPayload]) => {
         if (!mountedRef.current) return;
         setData(dashboardPayload);
         setTrendingWallets(trendingPayload.wallets);
+        setTrendingMarkets(trendingMarketsPayload.markets);
         setState('loaded');
         setLastUpdatedAt(new Date());
       })
@@ -385,6 +463,10 @@ export default function DashboardPage() {
 
             <SectionCard title="Trending Wallets">
               <TrendingWalletsTable wallets={trendingWallets} />
+            </SectionCard>
+
+            <SectionCard title="Trending Markets">
+              <TrendingMarketsTable markets={trendingMarkets} />
             </SectionCard>
           </div>
         </>

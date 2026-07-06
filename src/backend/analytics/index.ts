@@ -6,3 +6,4 @@ export * from './scoring/index.js';
 export * from './signals/index.js';
 export * from './dashboard/index.js';
 export * from './trending/index.js';
+export * from './trendingMarkets/index.js';

@@ -440,3 +440,121 @@ export async function getWalletActivityWindows(
     lastTradeAt: row.last_trade_at,
   }));
 }
+
+export interface MarketActivityWindow {
+  marketId: string;
+  /** Most recent non-null `event_title` seen for this market within the 2x window; `null` if none had one. */
+  eventTitle: string | null;
+  recentTradeCount: number;
+  recentVolumeUsd: string;
+  previousTradeCount: number;
+  previousVolumeUsd: string;
+  /** Distinct `owner_pubkey`s trading this market within the *recent* window only (not the previous one). */
+  uniqueWallets: number;
+  lastActivityAt: Date;
+}
+
+interface MarketActivityWindowRow {
+  market_id: string;
+  event_title: string | null;
+  recent_trade_count: string;
+  recent_volume_usd: string;
+  previous_trade_count: string;
+  previous_volume_usd: string;
+  unique_wallets: string;
+  last_activity_at: Date;
+}
+
+/**
+ * Trending-market read path (`src/backend/analytics/trendingMarkets/`,
+ * Phase 4.2) — the market-grouped counterpart to
+ * `getWalletActivityWindows`. Unlike that function, this one DOES bound
+ * its base scan to the `2 * recentMinutes` window — markets have no
+ * "first appearance recency" signal (that's wallet-specific, see
+ * `getWalletActivityWindows`'s own doc comment on why *it* can't be
+ * bounded), so there's no `MIN(upstream_timestamp)` here that would be
+ * corrupted by a bounded scan, and bounding it keeps this cheap on a
+ * `trades` table that only keeps growing.
+ */
+export async function getMarketActivityWindows(
+  recentMinutes: number,
+  limit = 500,
+): Promise<MarketActivityWindow[]> {
+  const pool = getPool();
+  const result = await pool.query<MarketActivityWindowRow>(
+    `SELECT market_id,
+            (ARRAY_AGG(event_title ORDER BY upstream_timestamp DESC) FILTER (WHERE event_title IS NOT NULL))[1] AS event_title,
+            COUNT(*) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) AS recent_trade_count,
+            COALESCE(SUM(amount_usd) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)), 0)::text AS recent_volume_usd,
+            COUNT(*) FILTER (
+              WHERE upstream_timestamp >= now() - make_interval(mins => $1 * 2)
+                AND upstream_timestamp < now() - make_interval(mins => $1)
+            ) AS previous_trade_count,
+            COALESCE(SUM(amount_usd) FILTER (
+              WHERE upstream_timestamp >= now() - make_interval(mins => $1 * 2)
+                AND upstream_timestamp < now() - make_interval(mins => $1)
+            ), 0)::text AS previous_volume_usd,
+            COUNT(DISTINCT owner_pubkey) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) AS unique_wallets,
+            MAX(upstream_timestamp) AS last_activity_at
+     FROM trades
+     WHERE upstream_timestamp >= now() - make_interval(mins => $1 * 2)
+     GROUP BY market_id
+     HAVING COUNT(*) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) > 0
+     ORDER BY COUNT(*) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) DESC
+     LIMIT $2`,
+    [recentMinutes, limit],
+  );
+
+  return result.rows.map((row) => ({
+    marketId: row.market_id,
+    eventTitle: row.event_title,
+    recentTradeCount: Number(row.recent_trade_count),
+    recentVolumeUsd: row.recent_volume_usd,
+    previousTradeCount: Number(row.previous_trade_count),
+    previousVolumeUsd: row.previous_volume_usd,
+    uniqueWallets: Number(row.unique_wallets),
+    lastActivityAt: row.last_activity_at,
+  }));
+}
+
+export interface MarketTraderWallets {
+  marketId: string;
+  walletPubkeys: string[];
+}
+
+interface MarketTraderWalletsRow {
+  market_id: string;
+  wallet_pubkeys: string[];
+}
+
+/**
+ * Trending-market read path (`src/backend/analytics/trendingMarkets/`,
+ * Phase 4.2) — for a given set of (already-identified-as-candidate)
+ * markets, every distinct wallet that traded each one within the recent
+ * window. This is the identity list `gatherTrendingMarketsInput.ts`
+ * cross-references against `wallet_score_snapshots` to compute "how many
+ * of this market's traders are smart wallets" — a count
+ * `getMarketActivityWindows` can't produce on its own (it only knows
+ * `COUNT(DISTINCT owner_pubkey)`, not *which* pubkeys).
+ */
+export async function getMarketTraderWallets(
+  marketIds: string[],
+  recentMinutes: number,
+): Promise<MarketTraderWallets[]> {
+  if (marketIds.length === 0) return [];
+
+  const pool = getPool();
+  const result = await pool.query<MarketTraderWalletsRow>(
+    `SELECT market_id, ARRAY_AGG(DISTINCT owner_pubkey) AS wallet_pubkeys
+     FROM trades
+     WHERE market_id = ANY($1)
+       AND upstream_timestamp >= now() - make_interval(mins => $2)
+     GROUP BY market_id`,
+    [marketIds, recentMinutes],
+  );
+
+  return result.rows.map((row) => ({
+    marketId: row.market_id,
+    walletPubkeys: row.wallet_pubkeys,
+  }));
+}
