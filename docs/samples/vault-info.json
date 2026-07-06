@@ -1,0 +1,30 @@
+{
+  "endpoint": "/vault-info",
+  "url": "https://api.jup.ag/prediction/v1/vault-info",
+  "status": 200,
+  "ok": true,
+  "usedApiKey": false,
+  "parsedAsJson": true,
+  "elapsedMs": 170,
+  "fetchedAt": "2026-07-05T11:53:05.539Z",
+  "error": null,
+  "body": {
+    "pubkey": "BrTCoKzZoh7waCM3h2MuJKan8fX2A574gedorgPRC3HJ",
+    "data": {
+      "settlementMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "currentContracts": "195503000000",
+      "currentOpenOrders": "0",
+      "globalMaxContracts": "1035000000000",
+      "positionMaxContracts": "50000000000",
+      "positionMaxOrders": "1",
+      "settlementDelaySeconds": "0",
+      "depositsDisabled": "false",
+      "withdrawalsDisabled": "false",
+      "protocolFeeBps": "0",
+      "bump": "255",
+      "tradingDisabled": "false",
+      "unitVersion": "1"
+    },
+    "vaultBalance": "303.934795"
+  }
+}

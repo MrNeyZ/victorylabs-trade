@@ -1,0 +1,23 @@
+{
+  "endpoint": "/profiles/GKa5bz8UVsMz5d4HygNDnQF7HNxDhxCzQTB1FsZ2ZHF",
+  "url": "https://api.jup.ag/prediction/v1/profiles/GKa5bz8UVsMz5d4HygNDnQF7HNxDhxCzQTB1FsZ2ZHF",
+  "status": 200,
+  "ok": true,
+  "usedApiKey": false,
+  "parsedAsJson": true,
+  "elapsedMs": 3096,
+  "fetchedAt": "2026-07-05T11:52:52.996Z",
+  "error": null,
+  "body": {
+    "ownerPubkey": "GKa5bz8UVsMz5d4HygNDnQF7HNxDhxCzQTB1FsZ2ZHF",
+    "realizedPnlUsd": "300770948",
+    "totalVolumeUsd": "3307684802",
+    "predictionsCount": "190",
+    "correctPredictions": "57",
+    "wrongPredictions": "133",
+    "totalActiveContracts": "531",
+    "totalActiveContractsMicro": "531180000",
+    "totalActiveContractsDecimal": "531.18",
+    "totalPositionsValueUsd": "39428260"
+  }
+}

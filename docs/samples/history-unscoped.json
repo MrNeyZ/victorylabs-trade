@@ -1,0 +1,18 @@
+{
+  "endpoint": "/history",
+  "url": "https://api.jup.ag/prediction/v1/history",
+  "status": 400,
+  "ok": false,
+  "usedApiKey": false,
+  "parsedAsJson": true,
+  "elapsedMs": 150,
+  "fetchedAt": "2026-07-05T11:52:57.148Z",
+  "error": null,
+  "body": {
+    "type": "invalid_request_error",
+    "message": "ownerPubkey or userPubkey is required",
+    "code": "custom",
+    "param": "ownerPubkey",
+    "request_id": "19943d04-2f12-4aed-8baa-fb0638852ac4"
+  }
+}

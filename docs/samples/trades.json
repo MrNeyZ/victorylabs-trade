@@ -1,0 +1,467 @@
+{
+  "endpoint": "/trades",
+  "url": "https://api.jup.ag/prediction/v1/trades",
+  "status": 200,
+  "ok": true,
+  "usedApiKey": false,
+  "parsedAsJson": true,
+  "elapsedMs": 214,
+  "fetchedAt": "2026-07-05T11:52:37.404Z",
+  "error": null,
+  "body": {
+    "data": [
+      {
+        "id": "order-2357571",
+        "ownerPubkey": "GKa5bz8UVsMz5d4HygNDnQF7HNxDhxCzQTB1FsZ2ZHF",
+        "marketId": "POLY-2794564-0",
+        "message": "GKa5bz8UVsMz5d4HygNDnQF7HNxDhxCzQTB1FsZ2ZHF bought Yes for Up at $0.17 ($4.46)",
+        "timestamp": 1783252349,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Bitcoin Up or Down - July 5, 7:50AM-7:55AM ET",
+        "marketTitle": "Up",
+        "amountUsd": "4459073",
+        "priceUsd": "169998",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+        "eventId": "POLY-665914",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Up",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357568",
+        "ownerPubkey": "AG4CvvFkbQggnY3t7RW4jqt3QHjhXXMSuSA95dU5YBs3",
+        "marketId": "POLY-2754647",
+        "message": "AG4CvvFkbQggnY3t7RW4jqt3QHjhXXMSuSA95dU5YBs3 bought Yes for Brazil at $0.55 ($15.05)",
+        "timestamp": 1783252345,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Brazil vs. Norway",
+        "marketTitle": "Brazil",
+        "amountUsd": "15047972",
+        "priceUsd": "549998",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/fifa-world-cup-group-a-winner-XDywxlUqlGwj.jpg",
+        "eventId": "POLY-654615",
+        "isTeamMarket": false,
+        "marketOptions": [
+          {
+            "label": "Yes",
+            "buyYes": true
+          },
+          {
+            "label": "No",
+            "buyYes": false
+          }
+        ]
+      },
+      {
+        "id": "order-2357559",
+        "ownerPubkey": "8KaevGZWuttcYCQeq2XwDseDq3QUGTEEiGje21roRyVh",
+        "marketId": "POLY-2794563-1",
+        "message": "8KaevGZWuttcYCQeq2XwDseDq3QUGTEEiGje21roRyVh bought Yes for Down at $0.15 ($7.21)",
+        "timestamp": 1783252314,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Hyperliquid Up or Down - July 5, 7:50AM-7:55AM ET",
+        "marketTitle": "Down",
+        "amountUsd": "7210000",
+        "priceUsd": "154389",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/hyperliquid-16f0eafaeb.png",
+        "eventId": "POLY-665911",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Down",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357555",
+        "ownerPubkey": "3sd3Q1Yq8gJYJESEXNdisafFNhN6U1hAAcfzqoorjszk",
+        "marketId": "POLY-2798721-0",
+        "message": "3sd3Q1Yq8gJYJESEXNdisafFNhN6U1hAAcfzqoorjszk bought Yes for B8 at $0.05 ($23.07)",
+        "timestamp": 1783252298,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Counter-Strike: B8 vs BIG (BO3) - XSE Pro League Group Stage",
+        "marketTitle": "B8",
+        "amountUsd": "23070000",
+        "priceUsd": "50000",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/counter-strike-image-16c415c538.png",
+        "eventId": "POLY-667132",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "B8",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357551",
+        "ownerPubkey": "DihBEqP1e7gWzY9KnrkycSwUGZ5Md4frLkDw7qcXQVhU",
+        "marketId": "POLY-2794549-1",
+        "message": "DihBEqP1e7gWzY9KnrkycSwUGZ5Md4frLkDw7qcXQVhU sold Yes for Down at $0.58 ($4.63)",
+        "timestamp": 1783252291,
+        "action": "sell",
+        "side": "yes",
+        "eventTitle": "Bitcoin Up or Down - July 5, 7:45AM-8:00AM ET",
+        "marketTitle": "Down",
+        "amountUsd": "4629200",
+        "priceUsd": "580000",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+        "eventId": "POLY-665900",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Down",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357547",
+        "ownerPubkey": "7RubT6ZYVQRHS8MbAyKG2UX1yQKH9U3XA4hkVprj4YPh",
+        "marketId": "POLY-2794564-0",
+        "message": "7RubT6ZYVQRHS8MbAyKG2UX1yQKH9U3XA4hkVprj4YPh bought Yes for Up at $0.59 ($1454.60)",
+        "timestamp": 1783252286,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Bitcoin Up or Down - July 5, 7:50AM-7:55AM ET",
+        "marketTitle": "Up",
+        "amountUsd": "1454603212",
+        "priceUsd": "590485",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+        "eventId": "POLY-665914",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Up",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357543",
+        "ownerPubkey": "J8k8F3E8gNhxnYAPe47jkkEbt4BsDS6hmH7rYLDE1jP7",
+        "marketId": "POLY-2794564-0",
+        "message": "J8k8F3E8gNhxnYAPe47jkkEbt4BsDS6hmH7rYLDE1jP7 bought Yes for Up at $0.57 ($4.60)",
+        "timestamp": 1783252276,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Bitcoin Up or Down - July 5, 7:50AM-7:55AM ET",
+        "marketTitle": "Up",
+        "amountUsd": "4599891",
+        "priceUsd": "569998",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+        "eventId": "POLY-665914",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Up",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357539",
+        "ownerPubkey": "HADG7Z3ooeK4XhoqaUDcGDUmwDUCUzF2mAxq6BhqJKkb",
+        "marketId": "POLY-2794564-0",
+        "message": "HADG7Z3ooeK4XhoqaUDcGDUmwDUCUzF2mAxq6BhqJKkb bought Yes for Up at $0.51 ($16.51)",
+        "timestamp": 1783252265,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Bitcoin Up or Down - July 5, 7:50AM-7:55AM ET",
+        "marketTitle": "Up",
+        "amountUsd": "16508667",
+        "priceUsd": "509998",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+        "eventId": "POLY-665914",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Up",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357524",
+        "ownerPubkey": "5o6eKs8HShjf5U9PmXTuVqBDvaygvmxbs6AZ4NWD8h9U",
+        "marketId": "POLY-2794554-1",
+        "message": "5o6eKs8HShjf5U9PmXTuVqBDvaygvmxbs6AZ4NWD8h9U bought Yes for Down at $0.59 ($50.75)",
+        "timestamp": 1783252193,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Solana Up or Down - July 5, 7:45AM-8:00AM ET",
+        "marketTitle": "Down",
+        "amountUsd": "50749599",
+        "priceUsd": "587923",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/SOL+fullsize.png",
+        "eventId": "POLY-665905",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Down",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357520",
+        "ownerPubkey": "J8k8F3E8gNhxnYAPe47jkkEbt4BsDS6hmH7rYLDE1jP7",
+        "marketId": "POLY-2794545-1",
+        "message": "J8k8F3E8gNhxnYAPe47jkkEbt4BsDS6hmH7rYLDE1jP7 bought Yes for Down at $0.90 ($4.70)",
+        "timestamp": 1783252188,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Solana Up or Down - July 5, 7:45AM-7:50AM ET",
+        "marketTitle": "Down",
+        "amountUsd": "4698000",
+        "priceUsd": "900000",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/SOL+fullsize.png",
+        "eventId": "POLY-665899",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Down",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357515",
+        "ownerPubkey": "DFGsqqnLTS4vREvDbun4vxJTFcZ8Z3RFPFxARzRTtL5z",
+        "marketId": "POLY-2794544-0",
+        "message": "DFGsqqnLTS4vREvDbun4vxJTFcZ8Z3RFPFxARzRTtL5z sold Yes for Up at $0.17 ($1.19)",
+        "timestamp": 1783252169,
+        "action": "sell",
+        "side": "yes",
+        "eventTitle": "Bitcoin Up or Down - July 5, 7:45AM-7:50AM ET",
+        "marketTitle": "Up",
+        "amountUsd": "1185340",
+        "priceUsd": "168942",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+        "eventId": "POLY-665895",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Up",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357511",
+        "ownerPubkey": "GKa5bz8UVsMz5d4HygNDnQF7HNxDhxCzQTB1FsZ2ZHF",
+        "marketId": "POLY-2794544-0",
+        "message": "GKa5bz8UVsMz5d4HygNDnQF7HNxDhxCzQTB1FsZ2ZHF bought Yes for Up at $0.08 ($4.43)",
+        "timestamp": 1783252161,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Bitcoin Up or Down - July 5, 7:45AM-7:50AM ET",
+        "marketTitle": "Up",
+        "amountUsd": "4429600",
+        "priceUsd": "80000",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+        "eventId": "POLY-665895",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Up",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357508",
+        "ownerPubkey": "8yYw5fKLpbBTGRzEFUMWwsMxqX3o5cj2ttS7rQpQ7hTm",
+        "marketId": "POLY-2794549-1",
+        "message": "8yYw5fKLpbBTGRzEFUMWwsMxqX3o5cj2ttS7rQpQ7hTm bought Yes for Down at $0.60 ($10.11)",
+        "timestamp": 1783252156,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Bitcoin Up or Down - July 5, 7:45AM-8:00AM ET",
+        "marketTitle": "Down",
+        "amountUsd": "10110000",
+        "priceUsd": "600000",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+        "eventId": "POLY-665900",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Down",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357503",
+        "ownerPubkey": "J8k8F3E8gNhxnYAPe47jkkEbt4BsDS6hmH7rYLDE1jP7",
+        "marketId": "POLY-2794544-0",
+        "message": "J8k8F3E8gNhxnYAPe47jkkEbt4BsDS6hmH7rYLDE1jP7 bought Yes for Up at $0.64 ($4.61)",
+        "timestamp": 1783252126,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Bitcoin Up or Down - July 5, 7:45AM-7:50AM ET",
+        "marketTitle": "Up",
+        "amountUsd": "4614400",
+        "priceUsd": "640000",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+        "eventId": "POLY-665895",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Up",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357499",
+        "ownerPubkey": "DFGsqqnLTS4vREvDbun4vxJTFcZ8Z3RFPFxARzRTtL5z",
+        "marketId": "POLY-2794544-0",
+        "message": "DFGsqqnLTS4vREvDbun4vxJTFcZ8Z3RFPFxARzRTtL5z bought Yes for Up at $0.58 ($4.61)",
+        "timestamp": 1783252119,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Bitcoin Up or Down - July 5, 7:45AM-7:50AM ET",
+        "marketTitle": "Up",
+        "amountUsd": "4605192",
+        "priceUsd": "579998",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+        "eventId": "POLY-665895",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Up",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357492",
+        "ownerPubkey": "J8k8F3E8gNhxnYAPe47jkkEbt4BsDS6hmH7rYLDE1jP7",
+        "marketId": "POLY-2794544-0",
+        "message": "J8k8F3E8gNhxnYAPe47jkkEbt4BsDS6hmH7rYLDE1jP7 bought Yes for Up at $0.75 ($4.00)",
+        "timestamp": 1783252090,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Bitcoin Up or Down - July 5, 7:45AM-7:50AM ET",
+        "marketTitle": "Up",
+        "amountUsd": "3997500",
+        "priceUsd": "750000",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+        "eventId": "POLY-665895",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Up",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357487",
+        "ownerPubkey": "4Lf8F9ctAo5PtuMPUsUXWqxjziAyWpL8WYXkm6tjGF8c",
+        "marketId": "POLY-2788032-1",
+        "message": "4Lf8F9ctAo5PtuMPUsUXWqxjziAyWpL8WYXkm6tjGF8c sold Yes for Barbora Krejcikova at $0.38 ($4.49)",
+        "timestamp": 1783252069,
+        "action": "sell",
+        "side": "yes",
+        "eventTitle": "Wimbledon WTA: Karolina Muchova vs Barbora Krejcikova",
+        "marketTitle": "Barbora Krejcikova",
+        "amountUsd": "4485500",
+        "priceUsd": "380000",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/wta-logo-41f331bdf1.png",
+        "eventId": "POLY-663902",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "Barbora Krejcikova",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357475",
+        "ownerPubkey": "FR94g8PU3YzRrkNk2as3s1p6EsVyYQft9wYfXzWGUMTR",
+        "marketId": "POLY-2754647",
+        "message": "FR94g8PU3YzRrkNk2as3s1p6EsVyYQft9wYfXzWGUMTR bought Yes for Brazil at $0.55 ($9.37)",
+        "timestamp": 1783251988,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "Brazil vs. Norway",
+        "marketTitle": "Brazil",
+        "amountUsd": "9366482",
+        "priceUsd": "549998",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/fifa-world-cup-group-a-winner-XDywxlUqlGwj.jpg",
+        "eventId": "POLY-654615",
+        "isTeamMarket": false,
+        "marketOptions": [
+          {
+            "label": "Yes",
+            "buyYes": true
+          },
+          {
+            "label": "No",
+            "buyYes": false
+          }
+        ]
+      },
+      {
+        "id": "order-2357466",
+        "ownerPubkey": "BEKYTa2yT7TYpFYymU8wUcFJMEkFynZVMG2P73REN9yj",
+        "marketId": "POLY-2794286-1",
+        "message": "BEKYTa2yT7TYpFYymU8wUcFJMEkFynZVMG2P73REN9yj bought Yes for LYON at $0.06 ($4.80)",
+        "timestamp": 1783251960,
+        "action": "buy",
+        "side": "yes",
+        "eventTitle": "LoL: Bilibili Gaming vs LYON (BO5) - Mid-Season Invitational Playoffs",
+        "marketTitle": "LYON",
+        "amountUsd": "4799400",
+        "priceUsd": "60000",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/league-of-legends-61a4f083a6.png",
+        "eventId": "POLY-665821",
+        "isTeamMarket": true,
+        "marketOptions": [
+          {
+            "label": "LYON",
+            "buyYes": true
+          }
+        ]
+      },
+      {
+        "id": "order-2357461",
+        "ownerPubkey": "FR94g8PU3YzRrkNk2as3s1p6EsVyYQft9wYfXzWGUMTR",
+        "marketId": "POLY-2754647",
+        "message": "FR94g8PU3YzRrkNk2as3s1p6EsVyYQft9wYfXzWGUMTR sold Yes for Brazil at $0.54 ($4.46)",
+        "timestamp": 1783251941,
+        "action": "sell",
+        "side": "yes",
+        "eventTitle": "Brazil vs. Norway",
+        "marketTitle": "Brazil",
+        "amountUsd": "4463320",
+        "priceUsd": "540000",
+        "eventImageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/fifa-world-cup-group-a-winner-XDywxlUqlGwj.jpg",
+        "eventId": "POLY-654615",
+        "isTeamMarket": false,
+        "marketOptions": [
+          {
+            "label": "Yes",
+            "buyYes": true
+          },
+          {
+            "label": "No",
+            "buyYes": false
+          }
+        ]
+      }
+    ]
+  }
+}

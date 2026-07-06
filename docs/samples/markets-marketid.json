@@ -1,0 +1,51 @@
+{
+  "endpoint": "/markets/POLY-2794564-0",
+  "url": "https://api.jup.ag/prediction/v1/markets/POLY-2794564-0",
+  "status": 200,
+  "ok": true,
+  "usedApiKey": false,
+  "parsedAsJson": true,
+  "elapsedMs": 196,
+  "fetchedAt": "2026-07-05T11:53:09.741Z",
+  "error": null,
+  "body": {
+    "provider": "polymarket",
+    "marketId": "POLY-2794564-0",
+    "status": "open",
+    "result": null,
+    "marketResultPubkey": null,
+    "title": "Up",
+    "openTime": 1783166277,
+    "closeTime": 1783252500,
+    "isTeamMarket": true,
+    "rulesPrimary": "This market will resolve to \"Up\" if the Bitcoin price at the end of the time range specified in the title is greater than or equal to the price at the beginning of that range. Otherwise, it will resolve to \"Down\".\nThe resolution source for this market is information from Chainlink, specifically the BTC/USD data stream available at https://data.chain.link/streams/btc-usd.\nPlease note that this market is about the price according to Chainlink data stream BTC/USD, not according to other sources or spot markets.",
+    "rulesSecondary": "",
+    "resolveAt": null,
+    "pricing": {
+      "buyYesPriceUsd": 190000,
+      "sellYesPriceUsd": 180000,
+      "sellNoPriceUsd": 0,
+      "buyNoPriceUsd": 0,
+      "volume": 4001
+    },
+    "imageUrl": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png",
+    "team": null,
+    "outcomes": [
+      "Up",
+      "Down"
+    ],
+    "clobTokenIds": [
+      "64258709688371057977850274685198062418053250699535659713332643135248992104546",
+      "8434624272038623952483494078403134880363994043124154222222104653342034795517"
+    ],
+    "marketOptions": [
+      {
+        "label": "Up",
+        "buyYes": true
+      }
+    ],
+    "sportsMarketType": null,
+    "sportsLine": null,
+    "eventId": "POLY-665914"
+  }
+}

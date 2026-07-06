@@ -1,0 +1,180 @@
+{
+  "generatedAt": "2026-07-06T12:59:44.974Z",
+  "startedAt": "2026-07-05T12:35:30.841Z",
+  "elapsedMinutes": 1464.2,
+  "totalPolls": 9525,
+  "status429": 8,
+  "status5xx": 0,
+  "perEndpoint": {
+    "trades": {
+      "polls": 5738,
+      "ok": 5736,
+      "uptimePct": 99.97,
+      "errors": 0,
+      "statusCounts": {
+        "200": 5736,
+        "429": 2
+      },
+      "avgLatencyMs": 197,
+      "p95LatencyMs": 262,
+      "p99LatencyMs": 535,
+      "maxLatencyMs": 3964,
+      "avgResponseBytes": 11589
+    },
+    "trading-status": {
+      "polls": 1452,
+      "ok": 1451,
+      "uptimePct": 99.93,
+      "errors": 0,
+      "statusCounts": {
+        "200": 1451,
+        "429": 1
+      },
+      "avgLatencyMs": 134,
+      "p95LatencyMs": 149,
+      "p99LatencyMs": 318,
+      "maxLatencyMs": 2910,
+      "avgResponseBytes": 23
+    },
+    "leaderboards": {
+      "polls": 730,
+      "ok": 730,
+      "uptimePct": 100,
+      "errors": 0,
+      "statusCounts": {
+        "200": 730
+      },
+      "avgLatencyMs": 234,
+      "p95LatencyMs": 477,
+      "p99LatencyMs": 2288,
+      "maxLatencyMs": 4615,
+      "avgResponseBytes": 26951
+    },
+    "history": {
+      "polls": 1458,
+      "ok": 1453,
+      "uptimePct": 99.66,
+      "errors": 0,
+      "statusCounts": {
+        "200": 1453,
+        "429": 5
+      },
+      "avgLatencyMs": 234,
+      "p95LatencyMs": 453,
+      "p99LatencyMs": 779,
+      "maxLatencyMs": 2619,
+      "avgResponseBytes": 11200
+    },
+    "vault-info": {
+      "polls": 147,
+      "ok": 147,
+      "uptimePct": 100,
+      "errors": 0,
+      "statusCounts": {
+        "200": 147
+      },
+      "avgLatencyMs": 193,
+      "p95LatencyMs": 334,
+      "p99LatencyMs": 747,
+      "maxLatencyMs": 1011,
+      "avgResponseBytes": 478
+    }
+  },
+  "trades": {
+    "distinctIdsSeen": 6221,
+    "duplicateWithinResponse": 0,
+    "reappearedAfterGone": 37,
+    "reordered": 0,
+    "numericIdSpan": {
+      "min": 71141,
+      "max": 2395001,
+      "distinctTradesSeen": 6221
+    },
+    "fullWindowBurstCount": 1,
+    "malformedRows": 0,
+    "avgFreshnessSec": 22,
+    "maxObservedDelaySec": 240.6,
+    "avgBurstNewPerPoll": 1.08,
+    "maxObservedBurst": 20,
+    "avgTradesPerMinute": 4.25
+  },
+  "history": {
+    "distinctIdsSeen": 12,
+    "duplicateWithinResponse": 0,
+    "malformedRows": 0
+  },
+  "schemaChangeEvents": [],
+  "rateLimitSampleCount": 2000,
+  "rateLimitRecentSamples": [
+    {
+      "ts": 1783342672426,
+      "endpoint": "trades",
+      "remaining": "1",
+      "current": "4",
+      "reset": "1783342676"
+    },
+    {
+      "ts": 1783342687634,
+      "endpoint": "trades",
+      "remaining": "4",
+      "current": "1",
+      "reset": "1783342697"
+    },
+    {
+      "ts": 1783342702820,
+      "endpoint": "trades",
+      "remaining": "4",
+      "current": "1",
+      "reset": "1783342712"
+    },
+    {
+      "ts": 1783342718011,
+      "endpoint": "trades",
+      "remaining": "4",
+      "current": "1",
+      "reset": "1783342727"
+    },
+    {
+      "ts": 1783342727195,
+      "endpoint": "trading-status",
+      "remaining": "4",
+      "current": "1",
+      "reset": "1783342737"
+    },
+    {
+      "ts": 1783342733374,
+      "endpoint": "trades",
+      "remaining": "3",
+      "current": "2",
+      "reset": "1783342737"
+    },
+    {
+      "ts": 1783342748591,
+      "endpoint": "trades",
+      "remaining": "4",
+      "current": "1",
+      "reset": "1783342758"
+    },
+    {
+      "ts": 1783342763787,
+      "endpoint": "trades",
+      "remaining": "4",
+      "current": "1",
+      "reset": "1783342773"
+    },
+    {
+      "ts": 1783342776952,
+      "endpoint": "leaderboards",
+      "remaining": "4",
+      "current": "1",
+      "reset": "1783342786"
+    },
+    {
+      "ts": 1783342779130,
+      "endpoint": "trades",
+      "remaining": "3",
+      "current": "2",
+      "reset": "1783342786"
+    }
+  ]
+}

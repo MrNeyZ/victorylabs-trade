@@ -1,0 +1,1527 @@
+=== GET /api/v1/trades ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "ownerPubkey": {
+                        "type": "string"
+                    },
+                    "marketId": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "timestamp": {
+                        "type": "number"
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "buy",
+                            "sell"
+                        ]
+                    },
+                    "side": {
+                        "type": "string",
+                        "enum": [
+                            "yes",
+                            "no"
+                        ]
+                    },
+                    "eventTitle": {
+                        "type": "string"
+                    },
+                    "marketTitle": {
+                        "type": "string"
+                    },
+                    "amountUsd": {
+                        "type": "string"
+                    },
+                    "priceUsd": {
+                        "type": "string"
+                    },
+                    "eventImageUrl": {
+                        "type": "string"
+                    },
+                    "eventId": {
+                        "type": "string"
+                    },
+                    "isTeamMarket": {
+                        "type": "boolean"
+                    },
+                    "marketOptions": {
+                        "type": "array",
+                        "nullable": true,
+                        "items": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": {
+                                "nullable": true
+                            }
+                        },
+                        "description": "Structured options for FE display (e.g. [{ label: \"O 228.5\", buyYes: true }])"
+                    }
+                },
+                "required": [
+                    "id",
+                    "ownerPubkey",
+                    "marketId",
+                    "message",
+                    "timestamp",
+                    "action",
+                    "side",
+                    "eventTitle",
+                    "marketTitle",
+                    "amountUsd",
+                    "priceUsd",
+                    "eventImageUrl",
+                    "eventId",
+                    "isTeamMarket",
+                    "marketOptions"
+                ]
+            }
+        }
+    },
+    "required": [
+        "data"
+    ]
+}
+
+=== GET /api/v1/leaderboards ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "ownerPubkey": {
+                        "type": "string"
+                    },
+                    "realizedPnlUsd": {
+                        "type": "string"
+                    },
+                    "totalVolumeUsd": {
+                        "type": "string"
+                    },
+                    "predictionsCount": {
+                        "type": "number"
+                    },
+                    "correctPredictions": {
+                        "type": "number"
+                    },
+                    "wrongPredictions": {
+                        "type": "number"
+                    },
+                    "winRatePct": {
+                        "type": "string"
+                    },
+                    "period": {
+                        "type": "string"
+                    },
+                    "periodStart": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "periodEnd": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "ownerPubkey",
+                    "realizedPnlUsd",
+                    "totalVolumeUsd",
+                    "predictionsCount",
+                    "correctPredictions",
+                    "wrongPredictions",
+                    "winRatePct",
+                    "period",
+                    "periodStart",
+                    "periodEnd"
+                ]
+            }
+        },
+        "summary": {
+            "type": "object",
+            "properties": {
+                "all_time": {
+                    "type": "object",
+                    "properties": {
+                        "totalVolumeUsd": {
+                            "type": "string"
+                        },
+                        "predictionsCount": {
+                            "type": "number"
+                        }
+                    },
+                    "required": [
+                        "totalVolumeUsd",
+                        "predictionsCount"
+                    ]
+                },
+                "weekly": {
+                    "type": "object",
+                    "properties": {
+                        "totalVolumeUsd": {
+                            "type": "string"
+                        },
+                        "predictionsCount": {
+                            "type": "number"
+                        }
+                    },
+                    "required": [
+                        "totalVolumeUsd",
+                        "predictionsCount"
+                    ]
+                },
+                "monthly": {
+                    "type": "object",
+                    "properties": {
+                        "totalVolume
+
+=== GET /api/v1/profiles/{ownerPubkey} ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "ownerPubkey": {
+            "type": "string"
+        },
+        "realizedPnlUsd": {
+            "type": "string"
+        },
+        "totalVolumeUsd": {
+            "type": "string"
+        },
+        "predictionsCount": {
+            "type": "string"
+        },
+        "correctPredictions": {
+            "type": "string"
+        },
+        "wrongPredictions": {
+            "type": "string"
+        },
+        "totalActiveContracts": {
+            "type": "string",
+            "description": "Legacy active whole-contract quantity string, floored"
+        },
+        "totalActiveContractsMicro": {
+            "type": "string",
+            "description": "Exact active contracts in micro-contract units (1000000 = 1)"
+        },
+        "totalActiveContractsDecimal": {
+            "type": "string",
+            "description": "Exact active contracts as a decimal string"
+        },
+        "totalPositionsValueUsd": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "ownerPubkey",
+        "realizedPnlUsd",
+        "totalVolumeUsd",
+        "predictionsCount",
+        "correctPredictions",
+        "wrongPredictions",
+        "totalActiveContracts",
+        "totalActiveContractsMicro",
+        "totalActiveContractsDecimal",
+        "totalPositionsValueUsd"
+    ]
+}
+  [404] application/json:
+{
+    "type": "object",
+    "properties": {
+        "error": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "error"
+    ]
+}
+
+=== GET /api/v1/profiles/batch ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "weekly": {
+                        "type": "object",
+                        "properties": {
+                            "ownerPubkey": {
+                                "type": "string"
+                            },
+                            "realizedPnlUsd": {
+                                "type": "string"
+                            },
+                            "totalVolumeUsd": {
+                                "type": "string"
+                            },
+                            "predictionsCount": {
+                                "type": "string"
+                            },
+                            "correctPredictions": {
+                                "type": "string"
+                            },
+                            "wrongPredictions": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "ownerPubkey",
+                            "realizedPnlUsd",
+                            "totalVolumeUsd",
+                            "predictionsCount",
+                            "correctPredictions",
+                            "wrongPredictions"
+                        ]
+                    },
+                    "monthly": {
+                        "type": "object",
+                        "properties": {
+                            "ownerPubkey": {
+                                "type": "string"
+                            },
+                            "realizedPnlUsd": {
+                                "type": "string"
+                            },
+                            "totalVolumeUsd": {
+                                "type": "string"
+                            },
+                            "predictionsCount": {
+                                "type": "string"
+                            },
+                            "correctPredictions": {
+                                "type": "string"
+                            },
+                            "wrongPredictions": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "ownerPubkey",
+                            "realizedPnlUsd",
+                            "totalVolumeUsd",
+                            "predictionsCount",
+                            "correctPredictions",
+                            "wrongPredictions"
+                        ]
+                    },
+                    "all_time": {
+                        "type": "object",
+                        "properties": {
+                            "ownerPubkey": {
+                                "type": "string"
+                            },
+  
+  [400] application/json:
+{
+    "type": "object",
+    "properties": {
+        "error": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "error"
+    ]
+}
+
+=== GET /api/v1/profiles/{ownerPubkey}/pnl-history ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "ownerPubkey": {
+            "type": "string"
+        },
+        "history": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "timestamp": {
+                        "type": "integer"
+                    },
+                    "realizedPnlUsd": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "timestamp",
+                    "realizedPnlUsd"
+                ]
+            }
+        }
+    },
+    "required": [
+        "ownerPubkey",
+        "history"
+    ]
+}
+
+=== GET /api/v1/history ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "eventType": {
+                        "type": "string",
+                        "enum": [
+                            "order_created",
+                            "order_closed",
+                            "order_filled",
+                            "order_failed",
+                            "payout_claimed",
+                            "position_updated",
+                            "position_lost",
+                            "ticket_created",
+                            "ticket_accepted",
+                            "ticket_rejected",
+                            "ticket_settled",
+                            "ticket_claimed",
+                            "ticket_refunded",
+                            "ticket_closed"
+                        ]
+                    },
+                    "signature": {
+                        "type": "string"
+                    },
+                    "slot": {
+                        "type": "string"
+                    },
+                    "timestamp": {
+                        "type": "integer"
+                    },
+                    "orderPubkey": {
+                        "type": "string"
+                    },
+                    "positionPubkey": {
+                        "type": "string"
+                    },
+                    "marketId": {
+                        "type": "string"
+                    },
+                    "ownerPubkey": {
+                        "type": "string"
+                    },
+                    "keeperPubkey": {
+                        "type": "string"
+                    },
+                    "externalOrderId": {
+                        "type": "string"
+                    },
+                    "orderId": {
+                        "type": "string"
+                    },
+                    "isBuy": {
+                        "type": "boolean"
+                    },
+                    "isYes": {
+                        "type": "boolean"
+                    },
+                    "contracts": {
+                        "type": "string"
+                    },
+                    "contractsMicro": {
+                        "type": "string"
+                    },
+                    "contractsDecimal": {
+                        "type": "string"
+                    },
+                    "filledContracts": {
+                        "type": "string"
+                    },
+                    "filledContractsMicro": {
+                        "type": "string"
+                    },
+                    "filledContractsDecimal": {
+                        "type": "string"
+                    },
+                    "contractsSettled": {
+                        "type": "string"
+                
+
+=== GET /api/v2/history ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "positionPubkey": {
+                        "type": "string"
+                    },
+                    "ownerPubkey": {
+                        "type": "string"
+                    },
+                    "marketId": {
+                        "type": "string"
+                    },
+                    "isYes": {
+                        "type": "boolean"
+                    },
+                    "outcomeSide": {
+                        "type": "string",
+                        "enum": [
+                            "up",
+                            "down"
+                        ]
+                    },
+                    "sideLabel": {
+                        "type": "string",
+                        "enum": [
+                            "Up",
+                            "Down"
+                        ]
+                    },
+                    "lifecycleStatus": {
+                        "type": "string",
+                        "enum": [
+                            "open",
+                            "resolving",
+                            "settled"
+                        ]
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "claimed",
+                            "lost",
+                            "sold",
+                            "open",
+                            "failed",
+                            "won",
+                            "refunded"
+                        ]
+                    },
+                    "entryPriceUsd": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "exitPriceUsd": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "totalContracts": {
+                        "type": "string"
+                    },
+                    "totalContractsMicro": {
+                        "type": "string"
+                    },
+                    "totalContractsDecimal": {
+                        "type": "string"
+                    },
+                    "realizedPnlUsd": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "feesPaidUsd": {
+                        "type": "string"
+                    },
+                    "openedAt": {
+                        "type": "integer"
+                    },
+                    "closedAt": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "marketMetadata": {
+                        "type": "object",
+                        "properties": {
+                            "marketId": {
+
+
+=== GET /api/v1/positions ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "pubkey": {
+                        "type": "string",
+                        "description": "Position account public key"
+                    },
+                    "owner": {
+                        "type": "string",
+                        "description": "Position owner public key"
+                    },
+                    "ownerPubkey": {
+                        "type": "string",
+                        "description": "Position owner public key (alias of owner, prefer ownerPubkey going forward)"
+                    },
+                    "market": {
+                        "type": "string",
+                        "description": "Deterministic market PDA derived from marketId"
+                    },
+                    "marketId": {
+                        "type": "string",
+                        "description": "External market identifier (ticker)"
+                    },
+                    "marketIdHash": {
+                        "type": "string",
+                        "description": "Hashed market identifier used for on-chain PDAs"
+                    },
+                    "isYes": {
+                        "type": "boolean",
+                        "description": "True if this is a YES position"
+                    },
+                    "outcomeSide": {
+                        "type": "string",
+                        "enum": [
+                            "up",
+                            "down"
+                        ],
+                        "description": "Forecast side encoded by the per-side marketId"
+                    },
+                    "sideLabel": {
+                        "type": "string",
+                        "enum": [
+                            "Up",
+                            "Down"
+                        ],
+                        "description": "Forecast side display label"
+                    },
+                    "contracts": {
+                        "type": "string",
+                        "description": "Legacy whole-contract quantity string, floored for compatibility"
+                    },
+                    "contractsMicro": {
+                        "type": "string",
+                        "description": "Exact contracts held in micro-contract units (u64 as string, 1000000 = 1)"
+                    },
+                    "contractsDecimal": {
+                        "type": "string",
+                        "description": "Exact contracts held as a decimal string"
+                    },
+                    "totalCostUsd": {
+                        "type": "string",
+                        "description": "Total cost basis in micro USD (u128 as string); \"0\" when basis is unknown (Forecast self-custody ledger doesn't reconcile with the on-chain balance)"
+                    },
+                    
+  [400] application/json:
+{
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "invalid_request_error",
+                "authentication_error",
+                "permission_error",
+                "idempotency_error",
+                "rate_limit_error",
+                "api_error"
+            ]
+        },
+        "message": {
+            "type": "string"
+        },
+        "code": {
+            "type": "string"
+        },
+        "param": {
+            "type": "string"
+        },
+        "request_id": {
+            "type": "string"
+        },
+        "doc_url": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "type",
+        "message",
+        "request_id"
+    ]
+}
+
+=== GET /api/v2/positions ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/components/schemas/Position"
+                }
+            },
+            "description": "Positions grouped by owner public key. Every requested pubkey is present as a key, with an empty array when the owner has no matching positions."
+        }
+    },
+    "required": [
+        "data"
+    ]
+}
+  [400] application/json:
+{
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "invalid_request_error",
+                "authentication_error",
+                "permission_error",
+                "idempotency_error",
+                "rate_limit_error",
+                "api_error"
+            ]
+        },
+        "message": {
+            "type": "string"
+        },
+        "code": {
+            "type": "string"
+        },
+        "param": {
+            "type": "string"
+        },
+        "request_id": {
+            "type": "string"
+        },
+        "doc_url": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "type",
+        "message",
+        "request_id"
+    ]
+}
+
+=== GET /api/v1/markets/{marketId} ===
+  [200] application/json:
+{
+    "oneOf": [
+        {
+            "allOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "provider": {
+                            "type": "string",
+                            "enum": [
+                                "polymarket"
+                            ],
+                            "description": "Market data provider"
+                        },
+                        "marketId": {
+                            "type": "string",
+                            "description": "Market identifier"
+                        },
+                        "status": {
+                            "type": "string",
+                            "enum": [
+                                "open",
+                                "closed"
+                            ],
+                            "description": "Current market status"
+                        },
+                        "result": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                                "yes",
+                                "no",
+                                "draw"
+                            ],
+                            "description": "Current market result"
+                        },
+                        "marketResultPubkey": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "On-chain MarketResult account pubkey (present when market is settled and claimable)."
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Market title"
+                        },
+                        "openTime": {
+                            "type": "number"
+                        },
+                        "closeTime": {
+                            "type": "number"
+                        },
+                        "isTeamMarket": {
+                            "type": "boolean",
+                            "description": "Whether this is a team market"
+                        },
+                        "rulesPrimary": {
+                            "type": "string",
+                            "description": "Primary rules text"
+                        },
+                        "rulesSecondary": {
+                            "type": "string",
+                            "description": "Secondary rules text"
+                        },
+                        "resolveAt": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "ISO 8601 timestamp when market was resolved"
+                        },
+                        "pricing": {
+                            "$ref": "#/components/schemas/MarketPricing"
+                        },
+                        "imageUrl": {
+ 
+  [404] application/json:
+{
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "invalid_request_error",
+                "authentication_error",
+                "permission_error",
+                "idempotency_error",
+                "rate_limit_error",
+                "api_error"
+            ]
+        },
+        "message": {
+            "type": "string"
+        },
+        "code": {
+            "type": "string"
+        },
+        "param": {
+            "type": "string"
+        },
+        "request_id": {
+            "type": "string"
+        },
+        "doc_url": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "type",
+        "message",
+        "request_id"
+    ]
+}
+
+=== GET /api/v1/orderbook/{marketId} ===
+  [200] application/json:
+{
+    "nullable": true,
+    "description": "Forecast response payload"
+}
+  [400] application/json:
+{
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "invalid_request_error",
+                "authentication_error",
+                "permission_error",
+                "idempotency_error",
+                "rate_limit_error",
+                "api_error"
+            ]
+        },
+        "message": {
+            "type": "string"
+        },
+        "code": {
+            "type": "string"
+        },
+        "param": {
+            "type": "string"
+        },
+        "request_id": {
+            "type": "string"
+        },
+        "doc_url": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "type",
+        "message",
+        "request_id"
+    ]
+}
+  [502] application/json:
+{
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "invalid_request_error",
+                "authentication_error",
+                "permission_error",
+                "idempotency_error",
+                "rate_limit_error",
+                "api_error"
+            ]
+        },
+        "message": {
+            "type": "string"
+        },
+        "code": {
+            "type": "string"
+        },
+        "param": {
+            "type": "string"
+        },
+        "request_id": {
+            "type": "string"
+        },
+        "doc_url": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "type",
+        "message",
+        "request_id"
+    ]
+}
+
+=== GET /api/v1/events ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "eventId": {
+                        "type": "string",
+                        "description": "Application-level identifier"
+                    },
+                    "isActive": {
+                        "type": "boolean",
+                        "description": "Whether the event is active (listed on events)"
+                    },
+                    "isLive": {
+                        "type": "boolean",
+                        "description": "Whether the event is currently live"
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "The category for the event, allowed values: all, crypto, sports, politics, esports, culture, economics, tech"
+                    },
+                    "subcategory": {
+                        "type": "string",
+                        "description": "The subcategory for the event"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Tags for the event, e.g. 15m, 5m"
+                    },
+                    "metadata": {
+                        "type": "object",
+                        "properties": {
+                            "eventId": {
+                                "type": "string"
+                            },
+                            "title": {
+                                "type": "string"
+                            },
+                            "subtitle": {
+                                "type": "string"
+                            },
+                            "imageUrl": {
+                                "type": "string",
+                                "format": "uri"
+                            },
+                            "isLive": {
+                                "type": "boolean"
+                            },
+                            "status": {
+                                "type": "string"
+                            },
+                            "tags": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "beginAt": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "category": {
+                                "type": "string"
+                            },
+                            "subcategory": {
+                                "type": "string"
+                            }
+                        },
+          
+
+=== GET /api/v1/events/{eventId} ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "eventId": {
+            "type": "string",
+            "description": "Application-level identifier"
+        },
+        "isActive": {
+            "type": "boolean",
+            "description": "Whether the event is active (listed on events)"
+        },
+        "isLive": {
+            "type": "boolean",
+            "description": "Whether the event is currently live"
+        },
+        "category": {
+            "type": "string",
+            "description": "The category for the event, allowed values: all, crypto, sports, politics, esports, culture, economics, tech"
+        },
+        "subcategory": {
+            "type": "string",
+            "description": "The subcategory for the event"
+        },
+        "tags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Tags for the event, e.g. 15m, 5m"
+        },
+        "metadata": {
+            "type": "object",
+            "properties": {
+                "eventId": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "subtitle": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "isLive": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "beginAt": {
+                    "type": "string",
+                    "nullable": true
+                },
+                "category": {
+                    "type": "string"
+                },
+                "subcategory": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "eventId"
+            ]
+        },
+        "markets": {
+            "type": "array",
+            "items": {
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "properties": {
+                            "provider": {
+                                "type": "string",
+                                "enum": [
+                                    "polymarket"
+                                ],
+                                "description": "Market data provider"
+                            },
+                            "marketId": {
+                                "type": "string",
+                                "description": "Market identifier"
+                            },
+                            "status": {
+                                "type": "string",
+                                "enum": [
+                
+  [404] application/json:
+{
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "invalid_request_error",
+                "authentication_error",
+                "permission_error",
+                "idempotency_error",
+                "rate_limit_error",
+                "api_error"
+            ]
+        },
+        "message": {
+            "type": "string"
+        },
+        "code": {
+            "type": "string"
+        },
+        "param": {
+            "type": "string"
+        },
+        "request_id": {
+            "type": "string"
+        },
+        "doc_url": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "type",
+        "message",
+        "request_id"
+    ]
+}
+
+=== GET /api/v1/vault-info ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "pubkey": {
+            "type": "string"
+        },
+        "data": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "string"
+            }
+        },
+        "vaultBalance": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "pubkey",
+        "data",
+        "vaultBalance"
+    ]
+}
+  [404] application/json:
+{
+    "type": "object",
+    "properties": {
+        "error": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "error"
+    ]
+}
+
+=== GET /api/v1/trading-status ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "trading_active": {
+            "type": "boolean"
+        }
+    },
+    "required": [
+        "trading_active"
+    ]
+}
+
+=== GET /api/v1/followers/{ownerPubkey} ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "followers": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "pubkey": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "pubkey",
+                    "createdAt"
+                ]
+            }
+        },
+        "count": {
+            "type": "number"
+        }
+    },
+    "required": [
+        "followers",
+        "count"
+    ]
+}
+  [404] application/json:
+{
+    "type": "object",
+    "properties": {
+        "error": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "error"
+    ]
+}
+
+=== GET /api/v1/following/{ownerPubkey} ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "following": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "pubkey": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "pubkey",
+                    "createdAt"
+                ]
+            }
+        },
+        "count": {
+            "type": "number"
+        }
+    },
+    "required": [
+        "following",
+        "count"
+    ]
+}
+  [404] application/json:
+{
+    "type": "object",
+    "properties": {
+        "error": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "error"
+    ]
+}
+
+=== GET /api/v1/orders/status/{orderPubkey} ===
+  [200] application/json:
+{
+    "type": "object",
+    "properties": {
+        "orderPubkey": {
+            "type": "string"
+        },
+        "status": {
+            "type": "string"
+        },
+        "latestEventType": {
+            "type": "string"
+        },
+        "latestSignature": {
+            "type": "string"
+        },
+        "externalOrderId": {
+            "type": "string"
+        },
+        "orderId": {
+            "type": "string"
+        },
+        "history": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "eventType": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "rawStatus": {
+                        "type": "string"
+                    },
+                    "timestamp": {
+                        "type": "integer"
+                    },
+                    "signature": {
+                        "type": "string"
+                    },
+                    "externalOrderId": {
+                        "type": "string"
+                    },
+                    "orderId": {
+                        "type": "string"
+                    },
+                    "fillInfo": {
+                        "type": "object",
+                        "properties": {
+                            "isBuy": {
+                                "type": "boolean"
+                            },
+                            "isYes": {
+                                "type": "boolean"
+                            },
+                            "contracts": {
+                                "type": "string"
+                            },
+                            "contractsMicro": {
+                                "type": "string"
+                            },
+                            "contractsDecimal": {
+                                "type": "string"
+                            },
+                            "filledContracts": {
+                                "type": "string"
+                            },
+                            "filledContractsMicro": {
+                                "type": "string"
+                            },
+                            "filledContractsDecimal": {
+                                "type": "string"
+                            },
+                            "contractsSettled": {
+                                "type": "string"
+                            },
+                            "contractsSettledMicro": {
+                                "type": "string"
+                            },
+                            "contractsSettledDecimal": {
+                                "type": "string"
+                            },
+                            "maxFillPriceUsd": {
+                                "type": "string"
+                            },
+                            "avgFillPriceUsd": {
+             
+  [400] application/json:
+{
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "invalid_request_error",
+                "authentication_error",
+                "permission_error",
+                "idempotency_error",
+                "rate_limit_error",
+                "api_error"
+            ]
+        },
+        "message": {
+            "type": "string"
+        },
+        "code": {
+            "type": "string"
+        },
+        "param": {
+            "type": "string"
+        },
+        "request_id": {
+            "type": "string"
+        },
+        "doc_url": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "type",
+        "message",
+        "request_id"
+    ]
+}
+  [404] application/json:
+{
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "invalid_request_error",
+                "authentication_error",
+                "permission_error",
+                "idempotency_error",
+                "rate_limit_error",
+                "api_error"
+            ]
+        },
+        "message": {
+            "type": "string"
+        },
+        "code": {
+            "type": "string"
+        },
+        "param": {
+            "type": "string"
+        },
+        "request_id": {
+            "type": "string"
+        },
+        "doc_url": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "type",
+        "message",
+        "request_id"
+    ]
+}
+
+=== GET /api/v1/forecast ===
+  [200] application/json:
+{
+    "nullable": true,
+    "description": "Forecast response payload"
+}
+  [400] application/json:
+{
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "invalid_request_error",
+                "authentication_error",
+                "permission_error",
+                "idempotency_error",
+                "rate_limit_error",
+                "api_error"
+            ]
+        },
+        "message": {
+            "type": "string"
+        },
+        "code": {
+            "type": "string"
+        },
+        "param": {
+            "type": "string"
+        },
+        "request_id": {
+            "type": "string"
+        },
+        "doc_url": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "type",
+        "message",
+        "request_id"
+    ]
+}
+  [502] application/json:
+{
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "invalid_request_error",
+                "authentication_error",
+                "permission_error",
+                "idempotency_error",
+                "rate_limit_error",
+                "api_error"
+            ]
+        },
+        "message": {
+            "type": "string"
+        },
+        "code": {
+            "type": "string"
+        },
+        "param": {
+            "type": "string"
+        },
+        "request_id": {
+            "type": "string"
+        },
+        "doc_url": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "type",
+        "message",
+        "request_id"
+    ]
+}
+
