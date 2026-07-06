@@ -186,8 +186,32 @@ tbody tr:hover td {
   font-size: 13px;
 }
 
+/*
+ * Several tables (Trending Markets, Latest Signals, Whale Trades — any
+ * table with 7+ columns) are wider than their card on a typical
+ * viewport. Without an explicit scrollbar style, some platforms render
+ * this as an invisible overlay scrollbar that only appears on hover —
+ * a wide table then just looks truncated with no visible way to see the
+ * rest. An always-visible, on-brand scrollbar is a purely cosmetic fix
+ * for that (Phase 4.4) — the scrolling itself already worked.
+ */
 .table-scroll {
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a48 transparent;
+}
+
+.table-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+  background: #3a3a48;
+  border-radius: 4px;
 }
 
 .badge {

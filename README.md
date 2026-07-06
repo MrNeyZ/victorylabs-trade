@@ -193,6 +193,16 @@ it with `&` and `kill` only the top-level PID, the children are left
 running — that's a shell-scripting quirk of how you invoked it, not a
 `dev:all` behavior; the standard `Ctrl-C` usage above is unaffected.)
 
+**Demoing** (Phase 4.4): `npm run demo:prepare` is a stricter,
+bounded, one-shot version of the ingestion half of this flow —
+migrate → ingest trades/rankings/positions/history → compute Smart
+Scores → persist Smart Money Signals — tuned so a small freshly-ingested
+dataset actually produces visible dashboard signals instead of empty
+cards. It exits on its own; start `dev:backend`/`dev:frontend`
+afterward as above. See
+[`docs/demo-workflow.md`](./docs/demo-workflow.md) for exact expected
+output and how to pick a good demo wallet/market.
+
 **On "does anything run forever by accident"**: `backend:dev` and
 `frontend:dev` are meant to keep running until you stop them — that's
 normal for any dev server (identical to `next dev` or `nodemon` anywhere

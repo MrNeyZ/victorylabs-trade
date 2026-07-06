@@ -25,6 +25,7 @@
     "analytics:scores": "tsx src/backend/jobs/computeWalletScores.ts",
     "analytics:signals": "tsx src/backend/jobs/analyticsSignals.ts",
     "analytics:signals:persist": "tsx src/backend/jobs/persistSmartMoneySignals.ts",
+    "demo:prepare": "npm run db:migrate && npm run ingest:trades:once && npm run ingest:rankings && npm run ingest:positions:recent && npm run ingest:history:recent && npm run analytics:scores && npm run analytics:signals:persist -- --lookbackMinutes=1440 --minSmartScore=1 --whaleUsd=15 --consensusWallets=2",
     "backend:dev": "tsx watch src/backend/api/server.ts",
     "frontend:dev": "next dev src/frontend",
     "dev:backend": "npm run backend:dev",

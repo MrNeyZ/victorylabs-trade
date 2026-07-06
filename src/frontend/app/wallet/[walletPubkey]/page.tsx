@@ -44,6 +44,7 @@ interface WalletProfile {
 interface Position {
   positionPubkey: string;
   marketId: string;
+  isYes: boolean | null;
   sideLabel: 'Up' | 'Down' | null;
   valueUsd: string | null;
   pnlUsd: string | null;
@@ -305,9 +306,14 @@ function PositionsTable({ positions }: { positions: Position[] }) {
         </thead>
         <tbody>
           {positions.map((position) => (
-            <tr key={position.positionPubkey} title={position.marketId}>
-              <td>{position.marketId}</td>
-              <td>{position.sideLabel ?? '—'}</td>
+            <tr key={position.positionPubkey}>
+              <td>
+                <MarketLink marketId={position.marketId} />
+              </td>
+              <td>
+                {position.sideLabel ??
+                  (position.isYes === null ? '—' : position.isYes ? 'Yes' : 'No')}
+              </td>
               <td>{formatUsd(position.valueUsd)}</td>
               <td>{formatUsd(position.pnlUsd)}</td>
               <td>{position.lifecycleStatus ?? '—'}</td>
