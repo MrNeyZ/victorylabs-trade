@@ -73,6 +73,23 @@ interface DashboardResponse {
   activeSmartWallets: WalletScoreSnapshot[];
 }
 
+/** Mirrors the backend's `TrendingWallet` (`src/backend/analytics/trending/computeTrendingScore.ts`) — from a separate endpoint (`GET /api/trending/wallets`, Phase 4.1), fetched alongside `GET /api/dashboard` and folded into this page's single refresh cycle (see `loadDashboard` below). */
+interface TrendingWallet {
+  walletPubkey: string;
+  trendingScore: number;
+  reason: string[];
+  latestSmartScore: number | null;
+  recentTradeCount: number;
+  recentVolumeUsd: string;
+  lastActivityAt: string;
+}
+
+interface TrendingWalletsResponse {
+  lookbackMinutes: number;
+  limit: number;
+  wallets: TrendingWallet[];
+}
+
 function SignalsTable({
   signals,
   emptyMessage,
@@ -186,9 +203,51 @@ function TopMarketsTable({ markets }: { markets: TopActiveMarket[] }) {
   );
 }
 
+function TrendingWalletsTable({ wallets }: { wallets: TrendingWallet[] }) {
+  if (wallets.length === 0) {
+    return <EmptyState message="No trending wallets in this window." />;
+  }
+
+  return (
+    <div className="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Wallet</th>
+            <th>Trending Score</th>
+            <th>Smart Score</th>
+            <th>Recent Trades</th>
+            <th>Recent Volume</th>
+            <th>Last Activity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {wallets.map((wallet, index) => (
+            <tr key={wallet.walletPubkey} title={wallet.reason.join(' ')}>
+              <td>{index + 1}</td>
+              <td>
+                <WalletLink pubkey={wallet.walletPubkey} />
+              </td>
+              <td>{formatScore(wallet.trendingScore)}</td>
+              <td>
+                {wallet.latestSmartScore === null ? '—' : formatScore(wallet.latestSmartScore)}
+              </td>
+              <td>{wallet.recentTradeCount}</td>
+              <td>{formatUsd(wallet.recentVolumeUsd)}</td>
+              <td>{formatDateTime(wallet.lastActivityAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [state, setState] = useState<LoadState>('loading');
   const [data, setData] = useState<DashboardResponse | null>(null);
+  const [trendingWallets, setTrendingWallets] = useState<TrendingWallet[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
@@ -214,16 +273,29 @@ export default function DashboardPage() {
       setRefreshError(null);
     }
 
-    return fetch(`${API_BASE_URL}/api/dashboard`)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Dashboard request failed (HTTP ${response.status})`);
-        }
-        return (await response.json()) as DashboardResponse;
-      })
-      .then((payload) => {
+    const dashboardRequest = fetch(`${API_BASE_URL}/api/dashboard`).then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Dashboard request failed (HTTP ${response.status})`);
+      }
+      return (await response.json()) as DashboardResponse;
+    });
+
+    // A separate endpoint (`GET /api/trending/wallets`, Phase 4.1), fetched
+    // alongside the dashboard's own request rather than added to the
+    // dashboard's response — the trending card is still part of this one
+    // page/refresh cycle, it just composes two independent API calls.
+    const trendingRequest = fetch(`${API_BASE_URL}/api/trending/wallets`).then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Trending wallets request failed (HTTP ${response.status})`);
+      }
+      return (await response.json()) as TrendingWalletsResponse;
+    });
+
+    return Promise.all([dashboardRequest, trendingRequest])
+      .then(([dashboardPayload, trendingPayload]) => {
         if (!mountedRef.current) return;
-        setData(payload);
+        setData(dashboardPayload);
+        setTrendingWallets(trendingPayload.wallets);
         setState('loaded');
         setLastUpdatedAt(new Date());
       })
@@ -309,6 +381,10 @@ export default function DashboardPage() {
                 wallets={data.activeSmartWallets}
                 emptyMessage="No recently active wallets meet the smart-score bar."
               />
+            </SectionCard>
+
+            <SectionCard title="Trending Wallets">
+              <TrendingWalletsTable wallets={trendingWallets} />
             </SectionCard>
           </div>
         </>

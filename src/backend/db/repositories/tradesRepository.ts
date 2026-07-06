@@ -359,3 +359,84 @@ export async function getTopActiveMarkets(
     lastTradeAt: row.last_trade_at,
   }));
 }
+
+export interface WalletActivityWindow {
+  walletPubkey: string;
+  /** Trade count within the last `recentMinutes`. */
+  recentTradeCount: number;
+  /** Sum of `amount_usd` within the last `recentMinutes`. */
+  recentVolumeUsd: string;
+  /** Trade count in the *previous* window of equal length (`recentMinutes` to `2 * recentMinutes` ago) — the baseline `recentTradeCount` is compared against to detect a pickup in activity. */
+  previousTradeCount: number;
+  previousVolumeUsd: string;
+  /** This wallet's first trade ever seen by this project — NOT bounded to either window (see the function doc comment on why). */
+  firstTradeAt: Date;
+  lastTradeAt: Date;
+}
+
+interface WalletActivityWindowRow {
+  owner_pubkey: string;
+  recent_trade_count: string;
+  recent_volume_usd: string;
+  previous_trade_count: string;
+  previous_volume_usd: string;
+  first_trade_at: Date;
+  last_trade_at: Date;
+}
+
+/**
+ * Trending-wallet read path (`src/backend/analytics/trending/`, Phase
+ * 4.1) — for every wallet with at least one trade in the last
+ * `recentMinutes`, its trade count/volume in that window, the same in
+ * the *previous* window of equal length (for detecting a pickup in
+ * activity), and its first/last trade timestamps.
+ *
+ * Deliberately does NOT restrict the base scan to either window (no
+ * `WHERE upstream_timestamp >= ...` on the outer query) — `first_trade_at`
+ * needs to be each wallet's genuine first-ever trade, not just the
+ * earliest one inside whatever window this call happens to ask for; a
+ * long-time trader who happens to have `>= recentMinutes * 2` worth of
+ * trades would otherwise look "brand new" to the "first appearance
+ * recency" signal for no reason other than an arbitrary query bound. This
+ * scans the whole `trades` table — acceptable at this project's current
+ * scale (see `docs/trending-wallets.md`'s limitations section for the
+ * real fix: backing this off the still-unused `wallets.first_seen_at`
+ * column from `001_init.sql` instead of scanning `trades` for it).
+ */
+export async function getWalletActivityWindows(
+  recentMinutes: number,
+  limit = 500,
+): Promise<WalletActivityWindow[]> {
+  const pool = getPool();
+  const result = await pool.query<WalletActivityWindowRow>(
+    `SELECT owner_pubkey,
+            COUNT(*) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) AS recent_trade_count,
+            COALESCE(SUM(amount_usd) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)), 0)::text AS recent_volume_usd,
+            COUNT(*) FILTER (
+              WHERE upstream_timestamp >= now() - make_interval(mins => $1 * 2)
+                AND upstream_timestamp < now() - make_interval(mins => $1)
+            ) AS previous_trade_count,
+            COALESCE(SUM(amount_usd) FILTER (
+              WHERE upstream_timestamp >= now() - make_interval(mins => $1 * 2)
+                AND upstream_timestamp < now() - make_interval(mins => $1)
+            ), 0)::text AS previous_volume_usd,
+            MIN(upstream_timestamp) AS first_trade_at,
+            MAX(upstream_timestamp) AS last_trade_at
+     FROM trades
+     GROUP BY owner_pubkey
+     HAVING COUNT(*) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) > 0
+     ORDER BY COUNT(*) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) DESC
+     LIMIT $2`,
+    [recentMinutes, limit],
+  );
+
+  return result.rows.map((row) => ({
+    walletPubkey: row.owner_pubkey,
+    recentTradeCount: Number(row.recent_trade_count),
+    recentVolumeUsd: row.recent_volume_usd,
+    previousTradeCount: Number(row.previous_trade_count),
+    previousVolumeUsd: row.previous_volume_usd,
+    firstTradeAt: row.first_trade_at,
+    lastTradeAt: row.last_trade_at,
+  }));
+}

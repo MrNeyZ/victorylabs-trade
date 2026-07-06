@@ -197,3 +197,66 @@ export async function getRecentSignals(
 
   return result.rows.map(rowToPersistedSignal);
 }
+
+export interface WalletSignalCounts {
+  walletPubkey: string;
+  whaleTradeCount: number;
+  marketConsensusCount: number;
+}
+
+interface WalletSignalCountRow {
+  wallet_pubkey: string;
+  type: SignalType;
+  signal_count: string;
+}
+
+/**
+ * Trending-wallet read path (`src/backend/analytics/trending/`, Phase
+ * 4.1) — for a given set of wallets, how many `whale_trade` and
+ * `market_consensus` signals each appeared in within `lookbackMinutes`.
+ * `wallet_pubkeys` is an array column (one signal can name several
+ * wallets, e.g. `market_consensus`), so this expands it with `unnest`
+ * and correlates against the requested pubkeys; the `&&` overlap check
+ * lets Postgres use the GIN index on `wallet_pubkeys`
+ * (`idx_smart_money_signals_wallet_pubkeys`) before unnesting, rather
+ * than unnesting every signal in the window first.
+ *
+ * Wallets with zero of either type are still present in the result with
+ * both counts at `0`, not omitted — callers shouldn't need a fallback
+ * default for a wallet that simply has no whale/consensus signals.
+ */
+export async function getWalletSignalCounts(
+  walletPubkeys: string[],
+  lookbackMinutes: number,
+): Promise<WalletSignalCounts[]> {
+  if (walletPubkeys.length === 0) return [];
+
+  const countsByWallet = new Map<string, WalletSignalCounts>(
+    walletPubkeys.map((walletPubkey) => [
+      walletPubkey,
+      { walletPubkey, whaleTradeCount: 0, marketConsensusCount: 0 },
+    ]),
+  );
+
+  const pool = getPool();
+  const result = await pool.query<WalletSignalCountRow>(
+    `SELECT unnested.wallet_pubkey, s.type, COUNT(*)::text AS signal_count
+     FROM smart_money_signals s
+     CROSS JOIN LATERAL unnest(s.wallet_pubkeys) AS unnested(wallet_pubkey)
+     WHERE s.wallet_pubkeys && $1::text[]
+       AND unnested.wallet_pubkey = ANY($1)
+       AND s.type = ANY($2)
+       AND s.occurred_at >= now() - make_interval(mins => $3)
+     GROUP BY unnested.wallet_pubkey, s.type`,
+    [walletPubkeys, ['whale_trade', 'market_consensus'], lookbackMinutes],
+  );
+
+  for (const row of result.rows) {
+    const entry = countsByWallet.get(row.wallet_pubkey);
+    if (!entry) continue;
+    if (row.type === 'whale_trade') entry.whaleTradeCount = Number(row.signal_count);
+    if (row.type === 'market_consensus') entry.marketConsensusCount = Number(row.signal_count);
+  }
+
+  return Array.from(countsByWallet.values());
+}

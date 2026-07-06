@@ -135,8 +135,10 @@ backend's SSE stream directly and starts rendering trades already in the
 database, appending new ones as later ingestion runs add them.
 `/dashboard` (Phase 3.8) is a second page, one plain `fetch` against
 `GET /api/dashboard` on load — signals, top Smart Score wallets, whale
-trades, market consensus, top active markets, and recently active smart
-wallets in one view. `/wallet/:walletPubkey` (Phase 3.9) is a third page
+trades, market consensus, top active markets, recently active smart
+wallets, and (Phase 4.1) a Trending Wallets card fetched separately from
+`GET /api/trending/wallets` — "wallets becoming interesting right now",
+not the same ranking as Smart Score. `/wallet/:walletPubkey` (Phase 3.9) is a third page
 — one `fetch` against `GET /api/wallets/:walletPubkey` rendering Smart
 Score, stats, activity summary, market breakdown, positions, and recent
 trades/history/score-history for one wallet; every wallet pubkey shown on
@@ -207,6 +209,7 @@ Base URL: `http://localhost:4100` (or `$PORT`).
 | `GET /api/scores/latest?limit=&tier=&minScore=`                                         | Most recent persisted Smart Score snapshot bucket, sorted by score desc. `limit` default 50, max 200. See [`docs/smart-score.md`](./docs/smart-score.md) §6.                                                                                                              |
 | `GET /api/signals/recent?source=persisted\|live&lookbackMinutes=&minSmartScore=&limit=` | Smart Money Signals. `source=persisted` (default) reads the `smart_money_signals` table; `source=live` recomputes on request. See [`docs/smart-money-signals.md`](./docs/smart-money-signals.md).                                                                         |
 | `GET /api/dashboard?lookbackMinutes=&limit=`                                            | Combined read-only dashboard: signals, top Smart Score wallets, whale trades, market consensus, top active markets, recently active smart wallets. See [`docs/dashboard-api.md`](./docs/dashboard-api.md).                                                                |
+| `GET /api/trending/wallets?lookbackMinutes=&limit=`                                     | Wallets becoming interesting _right now_ (recent activity/growth/novelty — not "best wallet"), computed live. See [`docs/trending-wallets.md`](./docs/trending-wallets.md).                                                                                               |
 
 All read-only against Postgres; none of them call Jupiter or trigger
 ingestion.
