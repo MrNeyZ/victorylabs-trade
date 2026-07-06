@@ -154,3 +154,15 @@ export async function getRecentHistoryForWallet(
   );
   return result.rows.map(rowToHistoryEvent);
 }
+
+/**
+ * Analytics read path (`src/backend/analytics/walletStats/`) — every
+ * history event for one wallet, not just the most recent N. Reuses
+ * `getRecentHistoryForWallet` rather than a near-duplicate query; the
+ * limit is a generously-large safety bound, not a real per-wallet cap.
+ */
+const ALL_ROWS_SAFETY_LIMIT = 1_000_000;
+
+export async function getAllHistoryForWallet(ownerPubkey: string): Promise<HistoryEvent[]> {
+  return getRecentHistoryForWallet(ownerPubkey, ALL_ROWS_SAFETY_LIMIT);
+}

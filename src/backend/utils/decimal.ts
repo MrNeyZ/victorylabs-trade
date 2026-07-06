@@ -40,3 +40,72 @@ export function microUsdToUsdOrNull(microUsd: string | null | undefined): string
   if (microUsd === null || microUsd === undefined) return null;
   return microUsdToUsd(microUsd);
 }
+
+const DECIMAL_SCALE = 6;
+
+/**
+ * Parses an already-converted USD decimal string (e.g. `"4.517686"`,
+ * `"-8.404618"` — the domain-type shape, NOT upstream's micro-USD
+ * integer strings) into a fixed-point integer scaled by 10^6, so summing
+ * many of them can use exact `BigInt` addition instead of floating-point
+ * `Number` addition. Used by `sumDecimalStrings`/`averageDecimalStrings`
+ * (analytics aggregation — see `src/backend/analytics/`), which is the
+ * first place in this project that needs to add several already-decimal
+ * amounts together rather than just shifting one micro-USD integer.
+ */
+function decimalStringToScaled(value: string): bigint {
+  const negative = value.startsWith('-');
+  const unsigned = negative ? value.slice(1) : value;
+  const [integerPart = '0', fractionPart = ''] = unsigned.split('.');
+
+  if (!/^\d+$/.test(integerPart) || !/^\d*$/.test(fractionPart)) {
+    throw new Error(
+      `decimalStringToScaled: expected a decimal string, got ${JSON.stringify(value)}`,
+    );
+  }
+
+  const scaledFraction = fractionPart.padEnd(DECIMAL_SCALE, '0').slice(0, DECIMAL_SCALE);
+  const scaled = BigInt(integerPart + scaledFraction);
+  return negative ? -scaled : scaled;
+}
+
+function scaledToDecimalString(scaled: bigint): string {
+  const negative = scaled < 0n;
+  const unsigned = negative ? -scaled : scaled;
+  const padded = unsigned.toString().padStart(DECIMAL_SCALE + 1, '0');
+  const integerPart = padded.slice(0, -DECIMAL_SCALE);
+  const fractionPart = padded.slice(-DECIMAL_SCALE);
+  const result = `${integerPart}.${fractionPart}`;
+  return negative && scaled !== 0n ? `-${result}` : result;
+}
+
+/** Exact sum of decimal USD strings via scaled `BigInt` addition — `null`/`undefined` entries are skipped, not treated as zero-length input. Empty input sums to `"0.000000"`. */
+export function sumDecimalStrings(values: Array<string | null | undefined>): string {
+  let total = 0n;
+  for (const value of values) {
+    if (value === null || value === undefined) continue;
+    total += decimalStringToScaled(value);
+  }
+  return scaledToDecimalString(total);
+}
+
+/**
+ * Exact-sum, then integer-divide by count — average of decimal USD
+ * strings. `null`/`undefined` entries are excluded from both the sum and
+ * the count (not treated as zero). Returns `null` for empty input (there
+ * is no meaningful average of zero values — distinct from `"0.000000"`,
+ * which would claim a real, computed zero average).
+ *
+ * The final division truncates at the 6th decimal place (integer BigInt
+ * division, not rounded) — a worst-case error under $0.000001, acceptable
+ * for a display/analytics average that isn't fed back into further
+ * money arithmetic.
+ */
+export function averageDecimalStrings(values: Array<string | null | undefined>): string | null {
+  const present = values.filter((value): value is string => value !== null && value !== undefined);
+  if (present.length === 0) return null;
+
+  const total = present.reduce((sum, value) => sum + decimalStringToScaled(value), 0n);
+  const average = total / BigInt(present.length);
+  return scaledToDecimalString(average);
+}

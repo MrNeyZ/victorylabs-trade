@@ -204,6 +204,20 @@ export async function getRecentTrades(options: GetRecentTradesOptions = {}): Pro
   return result.rows.map(rowToTrade);
 }
 
+/**
+ * Analytics read path (`src/backend/analytics/walletStats/`) — every
+ * trade for one wallet, not just the most recent N. Deliberately reuses
+ * `getRecentTrades` (which already accepts `ownerPubkey` and an
+ * un-clamped `limit`) rather than writing a near-duplicate query; the
+ * limit here is just a generously-large safety bound, not a real cap for
+ * any wallet's actual trade count.
+ */
+const ALL_ROWS_SAFETY_LIMIT = 1_000_000;
+
+export async function getAllTradesForWallet(ownerPubkey: string): Promise<Trade[]> {
+  return getRecentTrades({ ownerPubkey, limit: ALL_ROWS_SAFETY_LIMIT });
+}
+
 export interface GetTradesSinceOptions {
   marketId?: string;
   ownerPubkey?: string;
