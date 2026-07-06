@@ -130,9 +130,14 @@ npm run dev:frontend
 ```
 
 Then open the frontend URL Next.js prints (it auto-picks the next free
-port starting at 3000) — the live trade feed connects to the backend's
-SSE stream directly and starts rendering trades already in the database,
-appending new ones as later ingestion runs add them.
+port starting at 3000) — the live trade feed (`/`) connects to the
+backend's SSE stream directly and starts rendering trades already in the
+database, appending new ones as later ingestion runs add them.
+`/dashboard` (Phase 3.8) is a second page, one plain `fetch` against
+`GET /api/dashboard` on load — signals, top Smart Score wallets, whale
+trades, market consensus, top active markets, and recently active smart
+wallets in one view. A shared nav bar (`app/layout.tsx`) links between
+the two.
 
 **Other ingestion jobs**, run on demand, each bounded and exits on its own
 (none of them loop forever unless you explicitly pass `--forever` to
@@ -278,7 +283,7 @@ src/
     types/                     jupiter.ts (raw upstream shapes) + domain.ts (normalized model)
     utils/                     decimal/string/time helpers shared by core + ingestion
   frontend/
-    app/                       Next.js App Router: layout.tsx, page.tsx (live feed), globals.css
+    app/                       Next.js App Router: layout.tsx (shared nav), page.tsx (live feed), dashboard/page.tsx, globals.css
   shared/                      Reserved for backend+frontend-shared types/utilities (unused so far)
 ```
 

@@ -98,3 +98,114 @@ tbody tr:hover td {
   text-align: center;
   color: #9a9aa8;
 }
+
+.error-state {
+  padding: 32px 0;
+  text-align: center;
+  color: #d96867;
+}
+
+/* Shared nav (Phase 3.8) */
+.site-nav {
+  display: flex;
+  gap: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 16px 0;
+}
+
+.site-nav a {
+  color: #9a9aa8;
+  text-decoration: none;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.site-nav a:hover {
+  color: #e6e6ea;
+}
+
+/* Dashboard (Phase 3.8) */
+.dashboard-meta {
+  color: #9a9aa8;
+  font-size: 12px;
+  margin: -6px 0 20px;
+}
+
+/*
+ * Single column, not a multi-column grid: this page's tables have up to
+ * 7 columns (wallet, market/event, side, amount, time, ...) and need the
+ * full ~1100px `main` width to stay readable — splitting into narrower
+ * side-by-side cards clipped key columns (amount, time) behind a
+ * horizontal scroll that wasn't visually obvious. Simple stack over a
+ * fancier layout, per this phase's "keep styling simple" brief.
+ */
+.dashboard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+
+.card h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9a9aa8;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.card .empty-state,
+.card .error-state {
+  padding: 20px 0;
+  font-size: 13px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  white-space: nowrap;
+}
+
+.severity-low {
+  color: #9a9aa8;
+}
+.severity-medium {
+  color: #d98f3b;
+}
+.severity-high {
+  color: #d96867;
+}
+
+.tier-elite {
+  color: #43b984;
+}
+.tier-strong {
+  color: #7fb8e0;
+}
+.tier-watch {
+  color: #c7b479;
+}
+.tier-weak {
+  color: #9a9aa8;
+}
+.tier-unknown {
+  color: #6d6d78;
+}
