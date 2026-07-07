@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { GlobalSearch } from './components/GlobalSearch';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -16,6 +17,11 @@ export const metadata: Metadata = {
  * would need `usePathname()` (a Client Component), which would force
  * this layout to give up its `metadata` export (Server-Component-only in
  * the App Router) — not worth it for a two-link nav bar.
+ *
+ * `<GlobalSearch />` (Phase 5.1) is itself a Client Component
+ * (`'use client'`), but rendering one as a *child* of a Server Component
+ * doesn't force the parent to become one too — this file stays a Server
+ * Component and keeps its `metadata` export exactly as before.
  */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -24,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <nav className="site-nav">
           <Link href="/">Live Feed</Link>
           <Link href="/dashboard">Dashboard</Link>
+          <GlobalSearch />
         </nav>
         {children}
       </body>

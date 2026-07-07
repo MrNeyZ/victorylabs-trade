@@ -53,3 +53,35 @@ export function parseLimitParam(
 ): ParseLimitResult {
   return parsePositiveIntParam(value, 'limit', defaultValue, maxValue);
 }
+
+export type ParseStringResult = { ok: true; value: string } | { ok: false; message: string };
+
+/**
+ * Parses a required, length-bounded string query param — trimmed before
+ * length-checking, so a whitespace-only value (`?q=%20%20`) is correctly
+ * rejected as too short rather than accepted as a 2-character query.
+ * Unlike `parsePositiveIntParam`, absent/empty is itself an error here
+ * (`GET /api/search`, Phase 5.1 — its `q` param has no meaningful
+ * default, unlike every other endpoint's `limit`/`lookbackMinutes`).
+ */
+export function parseRequiredStringParam(
+  value: unknown,
+  paramName: string,
+  minLength: number,
+  maxLength: number,
+): ParseStringResult {
+  const raw = firstQueryString(value);
+  if (raw === undefined) {
+    return { ok: false, message: `${paramName} is required` };
+  }
+
+  const trimmed = raw.trim();
+  if (trimmed.length < minLength || trimmed.length > maxLength) {
+    return {
+      ok: false,
+      message: `${paramName} must be between ${minLength} and ${maxLength} characters`,
+    };
+  }
+
+  return { ok: true, value: trimmed };
+}

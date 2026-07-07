@@ -232,6 +232,7 @@ Base URL: `http://localhost:4100` (or `$PORT`).
 | `GET /api/trending/wallets?lookbackMinutes=&limit=`                                     | Wallets becoming interesting _right now_ (recent activity/growth/novelty — not "best wallet"), computed live. See [`docs/trending-wallets.md`](./docs/trending-wallets.md).                                                                                               |
 | `GET /api/trending/markets?lookbackMinutes=&limit=`                                     | Markets becoming interesting _right now_ (activity/growth/participation/signals), computed live. See [`docs/trending-markets.md`](./docs/trending-markets.md).                                                                                                            |
 | `GET /api/markets/:marketId`                                                            | Market intelligence: activity summary, trending score, YES/NO breakdown, top/smart wallets, recent trades, whale/consensus signals. Unknown market → 200 with nulls/zeros, not 404. See [`docs/market-intelligence-api.md`](./docs/market-intelligence-api.md).           |
+| `GET /api/search?q=`                                                                    | Global wallet (prefix on `wallet_pubkey`) + market (prefix on `market_id`, `ILIKE` on `event_title`) search, capped at 20 results each. `q` is required, 2-100 characters (trimmed) — `400` otherwise. Powers the nav search bar (Phase 5.1).                             |
 
 All read-only against Postgres; none of them call Jupiter or trigger
 ingestion.

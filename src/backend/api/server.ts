@@ -40,6 +40,7 @@ import { signalsRouter } from './routes/signals.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { trendingRouter } from './routes/trending.js';
 import { marketsRouter } from './routes/markets.js';
+import { searchRouter } from './routes/search.js';
 
 const DEFAULT_PORT = 4100;
 
@@ -67,6 +68,7 @@ export function createServer(): Express {
   app.use('/api/dashboard', dashboardRouter);
   app.use('/api/trending', trendingRouter);
   app.use('/api/markets', marketsRouter);
+  app.use('/api/search', searchRouter);
 
   app.use((_req, res) => {
     res.status(404).json({ error: 'not_found' });

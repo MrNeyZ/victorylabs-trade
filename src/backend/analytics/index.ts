@@ -8,3 +8,4 @@ export * from './dashboard/index.js';
 export * from './trending/index.js';
 export * from './trendingMarkets/index.js';
 export * from './marketDetail/index.js';
+export * from './search/index.js';
