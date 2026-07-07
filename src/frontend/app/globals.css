@@ -140,6 +140,15 @@ tbody tr:hover td {
   letter-spacing: 0.04em;
 }
 
+/* Shared realtime status badge (Phase 5.5) — pinned to the far right of
+   the nav, and without the page-level `.status`'s own bottom margin
+   (that spacing only makes sense stacked above a page's content, not
+   inline in a single-row flex nav). */
+.site-nav .status {
+  margin-bottom: 0;
+  margin-left: auto;
+}
+
 .site-nav a:hover {
   color: #e6e6ea;
 }

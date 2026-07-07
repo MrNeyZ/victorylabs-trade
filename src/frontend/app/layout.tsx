@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { GlobalSearch } from './components/GlobalSearch';
 import { NotificationWatcher } from './components/NotificationWatcher';
+import { ConnectionStatusBadge } from './components/ConnectionStatusBadge';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -19,12 +20,13 @@ export const metadata: Metadata = {
  * this layout to give up its `metadata` export (Server-Component-only in
  * the App Router) — not worth it for a two-link nav bar.
  *
- * `<GlobalSearch />` (Phase 5.1) and `<NotificationWatcher />` (Phase
- * 5.3, renders nothing — a background poller) are themselves Client
- * Components (`'use client'`), but rendering one as a *child* of a
- * Server Component doesn't force the parent to become one too — this
- * file stays a Server Component and keeps its `metadata` export exactly
- * as before.
+ * `<GlobalSearch />` (Phase 5.1), `<NotificationWatcher />` (Phase 5.3,
+ * renders nothing — a background poller), and `<ConnectionStatusBadge />`
+ * (Phase 5.5, the shared realtime stream's live/reconnecting indicator)
+ * are themselves Client Components (`'use client'`), but rendering one as
+ * a *child* of a Server Component doesn't force the parent to become one
+ * too — this file stays a Server Component and keeps its `metadata`
+ * export exactly as before.
  */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -36,6 +38,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Link href="/watchlist">Watchlist</Link>
           <Link href="/settings">Settings</Link>
           <GlobalSearch />
+          <ConnectionStatusBadge />
         </nav>
         <NotificationWatcher />
         {children}

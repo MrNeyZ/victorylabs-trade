@@ -15,6 +15,8 @@ import { SectionCard } from '../../components/SectionCard';
 import { RefreshBar } from '../../components/RefreshBar';
 import { MarketLink } from '../../components/MarketLink';
 import { FavoriteButton } from '../../components/FavoriteButton';
+import { useRealtimeTrades, type RealtimeTrade } from '../../lib/realtimeTrades';
+import { useDebouncedCallback } from '../../lib/useDebouncedCallback';
 
 /**
  * Same fallback/reasoning as `app/page.tsx`/`app/dashboard/page.tsx` —
@@ -22,6 +24,9 @@ import { FavoriteButton } from '../../components/FavoriteButton';
  * `.env` isn't picked up here; the default already matches local dev.
  */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4100';
+
+/** Phase 5.5: how long to wait after the last live trade affecting this wallet before refetching — coalesces a burst into one refresh instead of one per trade. */
+const LIVE_REFRESH_DEBOUNCE_MS = 3_000;
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -492,6 +497,24 @@ export default function WalletDetailPage() {
   useEffect(() => {
     void loadWallet(true);
   }, [loadWallet]);
+
+  // Phase 5.5: live refresh. Recent trades/history/stats/activity summary/
+  // score history are all one bundle (`GET /api/wallets/:walletPubkey`), so
+  // a matching trade just triggers the same `loadWallet(false)` the
+  // Refresh button already uses (keeps last-good data on failure, no
+  // reload, no scroll reset) — debounced so a burst of this wallet's
+  // trades coalesces into one refetch instead of one per trade.
+  const scheduleLiveRefresh = useDebouncedCallback(() => {
+    void loadWallet(false);
+  }, LIVE_REFRESH_DEBOUNCE_MS);
+
+  const handleRealtimeTrade = useCallback(
+    (trade: RealtimeTrade) => {
+      if (trade.ownerPubkey === walletPubkey) scheduleLiveRefresh();
+    },
+    [walletPubkey, scheduleLiveRefresh],
+  );
+  useRealtimeTrades(handleRealtimeTrade);
 
   // A syntactically valid pubkey with no ingested data anywhere still
   // returns 200 with everything zeroed/empty (see wallets.ts's own doc

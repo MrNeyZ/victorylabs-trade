@@ -16,6 +16,8 @@ import { RefreshBar } from '../components/RefreshBar';
 import { FilterBar } from '../components/FilterBar';
 import type { SignalType } from '../lib/notifications';
 import { applySortDirection, useDashboardFilters } from '../lib/dashboardFilters';
+import { useRealtimeTrades } from '../lib/realtimeTrades';
+import { useDebouncedCallback } from '../lib/useDebouncedCallback';
 
 /**
  * Same fallback/reasoning as `app/page.tsx` — Next's env-file loading is
@@ -26,6 +28,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4
 
 /** Matches `/api/dashboard`'s own `DEFAULT_LIMIT` — keeps the "Latest Signals" row count identical to before Phase 5.4, when that table read `DashboardResponse.signals` instead of its own `/api/signals/recent` request. */
 const RECENT_SIGNALS_LIMIT = 20;
+
+/** Phase 5.5: how long to wait after the last live trade before refetching — coalesces a burst into one refresh instead of one per trade. */
+const LIVE_REFRESH_DEBOUNCE_MS = 3_000;
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -472,6 +477,23 @@ export default function DashboardPage() {
     }
     void loadDashboard(false);
   }, [hydrated, loadDashboard]);
+
+  // Phase 5.5: live refresh. The dashboard's own sections (signals, top
+  // wallets, trending wallets/markets, top markets) are all terminal-wide
+  // aggregates, not scoped to one wallet/market — so *any* trade on the
+  // shared stream is a reason to go re-check them, unlike the wallet/
+  // market detail pages below which only care about trades matching their
+  // own id. Debounced so a burst of trades (the stream can deliver many
+  // at once every 5s) coalesces into one refetch instead of one per
+  // trade; reuses `loadDashboard(false)` — the exact same "keep last-good
+  // data, show Updating…" path the Refresh button and lookback changes
+  // already use, so a live-triggered refresh can't blank the page or
+  // reset scroll position (it's a plain state update, not a navigation).
+  const scheduleLiveRefresh = useDebouncedCallback(() => {
+    if (!hydrated) return;
+    void loadDashboard(false);
+  }, LIVE_REFRESH_DEBOUNCE_MS);
+  useRealtimeTrades(scheduleLiveRefresh);
 
   // Everything below is a client-side re-derivation of already-fetched
   // data — none of it triggers a request. `signalType`/`minSmartScore`

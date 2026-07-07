@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { formatDateTime, formatScore, formatUsd } from '../../lib/format';
 import {
@@ -11,8 +11,11 @@ import {
 } from '../../components/Badge';
 import { EmptyState } from '../../components/EmptyState';
 import { SectionCard } from '../../components/SectionCard';
+import { RefreshBar } from '../../components/RefreshBar';
 import { WalletLink, WalletLinks } from '../../components/WalletLink';
 import { FavoriteButton } from '../../components/FavoriteButton';
+import { useRealtimeTrades, type RealtimeTrade } from '../../lib/realtimeTrades';
+import { useDebouncedCallback } from '../../lib/useDebouncedCallback';
 
 /**
  * Same fallback/reasoning as every other page in this app — Next's
@@ -20,6 +23,9 @@ import { FavoriteButton } from '../../components/FavoriteButton';
  * isn't picked up here; the default already matches local dev.
  */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4100';
+
+/** Phase 5.5: how long to wait after the last live trade affecting this market before refetching — coalesces a burst into one refresh instead of one per trade. */
+const LIVE_REFRESH_DEBOUNCE_MS = 3_000;
 
 type LoadState = 'loading' | 'loaded' | 'error';
 type SignalType = 'smart_wallet_trade' | 'elite_wallet_trade' | 'market_consensus' | 'whale_trade';
@@ -356,35 +362,89 @@ export default function MarketDetailPage() {
   const [state, setState] = useState<LoadState>('loading');
   const [data, setData] = useState<MarketDetailResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Phase 5.5: this page previously had no "refresh without blanking the
+  // page" path at all (no manual refresh button, no live updates) — added
+  // now, same `isRefreshing`/`refreshError`/`lastUpdatedAt` shape
+  // `wallet/[walletPubkey]/page.tsx`/`dashboard/page.tsx` already use, so
+  // a live-triggered refetch (or a manual Refresh click) keeps whatever
+  // is already on screen if it fails, instead of the page going blank.
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
+  const mountedRef = useRef(true);
   useEffect(() => {
-    if (!marketId) return;
-
-    let cancelled = false;
-    setState('loading');
-
-    fetch(`${API_BASE_URL}/api/markets/${encodeURIComponent(marketId)}`)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Market request failed (HTTP ${response.status})`);
-        }
-        return (await response.json()) as MarketDetailResponse;
-      })
-      .then((payload) => {
-        if (cancelled) return;
-        setData(payload);
-        setState('loaded');
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setErrorMessage(err instanceof Error ? err.message : 'Failed to load market');
-        setState('error');
-      });
-
+    mountedRef.current = true;
     return () => {
-      cancelled = true;
+      mountedRef.current = false;
     };
-  }, [marketId]);
+  }, []);
+
+  const loadMarket = useCallback(
+    (isInitial: boolean) => {
+      if (!marketId) return Promise.resolve();
+
+      if (isInitial) {
+        setState('loading');
+      } else {
+        setIsRefreshing(true);
+        setRefreshError(null);
+      }
+
+      return fetch(`${API_BASE_URL}/api/markets/${encodeURIComponent(marketId)}`)
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new Error(`Market request failed (HTTP ${response.status})`);
+          }
+          return (await response.json()) as MarketDetailResponse;
+        })
+        .then((payload) => {
+          if (!mountedRef.current) return;
+          setData(payload);
+          setState('loaded');
+          setLastUpdatedAt(new Date());
+        })
+        .catch((err: unknown) => {
+          if (!mountedRef.current) return;
+          const message = err instanceof Error ? err.message : 'Failed to load market';
+          if (isInitial) {
+            setErrorMessage(message);
+            setState('error');
+          } else {
+            setRefreshError(message);
+          }
+        })
+        .finally(() => {
+          if (!mountedRef.current) return;
+          if (!isInitial) setIsRefreshing(false);
+        });
+    },
+    [marketId],
+  );
+
+  // Re-runs (as a fresh "initial" load, not a "refresh") whenever the
+  // URL's market id itself changes — a different market is a different
+  // page, not a refresh of the same one, so old data is cleared, not kept.
+  useEffect(() => {
+    void loadMarket(true);
+  }, [loadMarket]);
+
+  // Phase 5.5: live refresh. Recent trades/activity/top wallets/whale &
+  // consensus signals are all one bundle (`GET /api/markets/:marketId`),
+  // so a matching trade just triggers the same `loadMarket(false)` a
+  // manual refresh would — debounced so a burst of this market's trades
+  // coalesces into one refetch instead of one per trade.
+  const scheduleLiveRefresh = useDebouncedCallback(() => {
+    void loadMarket(false);
+  }, LIVE_REFRESH_DEBOUNCE_MS);
+
+  const handleRealtimeTrade = useCallback(
+    (trade: RealtimeTrade) => {
+      if (trade.marketId === marketId) scheduleLiveRefresh();
+    },
+    [marketId, scheduleLiveRefresh],
+  );
+  useRealtimeTrades(handleRealtimeTrade);
 
   // Same "open identifier space" convention the wallet detail page uses
   // (see its own doc comment) — a syntactically valid marketId with no
@@ -412,6 +472,13 @@ export default function MarketDetailPage() {
 
       {state === 'loaded' && data && (
         <>
+          <RefreshBar
+            metaText={`Last updated ${formatDateTime(lastUpdatedAt?.toISOString() ?? null)}`}
+            isRefreshing={isRefreshing}
+            onRefresh={() => void loadMarket(false)}
+            refreshError={refreshError}
+          />
+
           {isUnknownMarket && (
             <EmptyState message="No data found for this market yet — it may not have been traded (or hasn't been ingested) within this project's coverage." />
           )}
