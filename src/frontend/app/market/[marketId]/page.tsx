@@ -12,6 +12,7 @@ import {
 import { EmptyState } from '../../components/EmptyState';
 import { SectionCard } from '../../components/SectionCard';
 import { WalletLink, WalletLinks } from '../../components/WalletLink';
+import { FavoriteButton } from '../../components/FavoriteButton';
 
 /**
  * Same fallback/reasoning as every other page in this app — Next's
@@ -393,7 +394,9 @@ export default function MarketDetailPage() {
 
   return (
     <main>
-      <h1>Market</h1>
+      <h1>
+        Market <FavoriteButton type="market" id={marketId} />
+      </h1>
       <p className="market-subtitle">
         {data?.eventTitle ?? marketId}
         {data?.eventTitle && <> ({marketId})</>}

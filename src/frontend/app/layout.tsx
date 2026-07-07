@@ -30,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <nav className="site-nav">
           <Link href="/">Live Feed</Link>
           <Link href="/dashboard">Dashboard</Link>
+          <Link href="/watchlist">Watchlist</Link>
           <GlobalSearch />
         </nav>
         {children}

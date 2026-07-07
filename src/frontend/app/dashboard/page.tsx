@@ -188,7 +188,7 @@ function WalletScoreTable({
             <tr key={wallet.walletPubkey} title={wallet.explanations.join(' ')}>
               <td>{index + 1}</td>
               <td>
-                <WalletLink pubkey={wallet.walletPubkey} />
+                <WalletLink pubkey={wallet.walletPubkey} showFavorite />
               </td>
               <td>{formatScore(wallet.score)}</td>
               <td>
@@ -220,7 +220,7 @@ function TopMarketsTable({ markets }: { markets: TopActiveMarket[] }) {
           {markets.map((market) => (
             <tr key={market.marketId}>
               <td>
-                <MarketLink marketId={market.marketId} label={market.eventTitle} />
+                <MarketLink marketId={market.marketId} label={market.eventTitle} showFavorite />
               </td>
               <td>{market.tradeCount}</td>
               <td>{formatUsd(market.volumeUsd)}</td>
@@ -257,7 +257,7 @@ function TrendingWalletsTable({ wallets }: { wallets: TrendingWallet[] }) {
             <tr key={wallet.walletPubkey} title={wallet.reason.join(' ')}>
               <td>{index + 1}</td>
               <td>
-                <WalletLink pubkey={wallet.walletPubkey} />
+                <WalletLink pubkey={wallet.walletPubkey} showFavorite />
               </td>
               <td>{formatScore(wallet.trendingScore)}</td>
               <td>
@@ -301,7 +301,7 @@ function TrendingMarketsTable({ markets }: { markets: TrendingMarket[] }) {
             <tr key={market.marketId} title={market.reason.join(' ')}>
               <td>{index + 1}</td>
               <td>
-                <MarketLink marketId={market.marketId} label={market.eventTitle} />
+                <MarketLink marketId={market.marketId} label={market.eventTitle} showFavorite />
               </td>
               <td>{formatScore(market.trendingScore)}</td>
               <td>{market.recentTradeCount}</td>

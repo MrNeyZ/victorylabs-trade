@@ -406,18 +406,27 @@ td a:hover {
   padding: 6px 14px;
 }
 
-.search-result {
+/* Row wrapping the result Link + its FavoriteButton (siblings, not nested — a <button> inside an <a> would be invalid HTML and double-fire on click). */
+.search-result-row {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 6px 14px;
-  color: #e6e6ea;
-  text-decoration: none;
+  align-items: center;
+  gap: 2px;
 }
 
-.search-result:hover,
-.search-result:focus {
+.search-result-row:hover,
+.search-result-row:focus-within {
   background: rgba(255, 255, 255, 0.06);
+}
+
+.search-result {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 4px 6px 14px;
+  color: #e6e6ea;
+  text-decoration: none;
 }
 
 .search-result-primary {
@@ -443,4 +452,64 @@ td a:hover {
 
 .search-error {
   color: #d96867;
+}
+
+/* Favorites / watchlist (Phase 5.2) */
+.favorite-button {
+  background: none;
+  border: none;
+  color: #9a9aa8;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.favorite-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e6e6ea;
+}
+
+/* Same gold used for the "watch" Smart Score tier — thematically the closest existing color to "this is on my watchlist." */
+.favorite-button-active {
+  color: #c7b479;
+}
+
+.favorite-button-small {
+  font-size: 13px;
+  padding: 2px 5px;
+}
+
+.watchlist-note {
+  color: #9a9aa8;
+  font-size: 12px;
+  margin: -6px 0 20px;
+}
+
+.watchlist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.watchlist-row:last-child {
+  border-bottom: none;
+}
+
+.watchlist-row-primary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.watchlist-row-meta {
+  font-size: 11px;
+  color: #9a9aa8;
+  margin-top: 2px;
 }

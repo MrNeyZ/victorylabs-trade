@@ -14,6 +14,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { SectionCard } from '../../components/SectionCard';
 import { RefreshBar } from '../../components/RefreshBar';
 import { MarketLink } from '../../components/MarketLink';
+import { FavoriteButton } from '../../components/FavoriteButton';
 
 /**
  * Same fallback/reasoning as `app/page.tsx`/`app/dashboard/page.tsx` —
@@ -506,7 +507,9 @@ export default function WalletDetailPage() {
 
   return (
     <main>
-      <h1>Wallet</h1>
+      <h1>
+        Wallet <FavoriteButton type="wallet" id={walletPubkey} />
+      </h1>
       <p className="wallet-pubkey">{walletPubkey}</p>
 
       {state === 'loading' && <p className="loading-state">Loading wallet…</p>}

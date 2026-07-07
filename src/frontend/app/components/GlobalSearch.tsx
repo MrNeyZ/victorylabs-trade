@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDateTime, formatScore, shortenPubkey } from '../lib/format';
 import { TierBadge, type WalletScoreTier } from './Badge';
+import { FavoriteButton } from './FavoriteButton';
 
 /** Same fallback/reasoning as every other page in this app. */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4100';
@@ -160,24 +161,26 @@ export function GlobalSearch() {
                 <div className="search-section">
                   <div className="search-section-label">Wallets</div>
                   {results.wallets.map((wallet) => (
-                    <Link
-                      key={wallet.walletPubkey}
-                      href={`/wallet/${wallet.walletPubkey}`}
-                      className="search-result"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <span className="search-result-primary">
-                        {shortenPubkey(wallet.walletPubkey)}
-                        {wallet.latestTier && <TierBadge tier={wallet.latestTier} />}
-                      </span>
-                      <span className="search-result-meta">
-                        {wallet.latestSmartScore !== null
-                          ? `Score ${formatScore(wallet.latestSmartScore)} · `
-                          : ''}
-                        {wallet.recentTradeCount} trade(s) · last active{' '}
-                        {formatDateTime(wallet.lastActivityAt)}
-                      </span>
-                    </Link>
+                    <div key={wallet.walletPubkey} className="search-result-row">
+                      <Link
+                        href={`/wallet/${wallet.walletPubkey}`}
+                        className="search-result"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <span className="search-result-primary">
+                          {shortenPubkey(wallet.walletPubkey)}
+                          {wallet.latestTier && <TierBadge tier={wallet.latestTier} />}
+                        </span>
+                        <span className="search-result-meta">
+                          {wallet.latestSmartScore !== null
+                            ? `Score ${formatScore(wallet.latestSmartScore)} · `
+                            : ''}
+                          {wallet.recentTradeCount} trade(s) · last active{' '}
+                          {formatDateTime(wallet.lastActivityAt)}
+                        </span>
+                      </Link>
+                      <FavoriteButton type="wallet" id={wallet.walletPubkey} size="small" />
+                    </div>
                   ))}
                 </div>
               )}
@@ -186,20 +189,22 @@ export function GlobalSearch() {
                 <div className="search-section">
                   <div className="search-section-label">Markets</div>
                   {results.markets.map((market) => (
-                    <Link
-                      key={market.marketId}
-                      href={`/market/${market.marketId}`}
-                      className="search-result"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <span className="search-result-primary">
-                        {market.eventTitle ?? market.marketId}
-                      </span>
-                      <span className="search-result-meta">
-                        {market.recentTradeCount} trade(s) · last active{' '}
-                        {formatDateTime(market.lastActivityAt)}
-                      </span>
-                    </Link>
+                    <div key={market.marketId} className="search-result-row">
+                      <Link
+                        href={`/market/${market.marketId}`}
+                        className="search-result"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <span className="search-result-primary">
+                          {market.eventTitle ?? market.marketId}
+                        </span>
+                        <span className="search-result-meta">
+                          {market.recentTradeCount} trade(s) · last active{' '}
+                          {formatDateTime(market.lastActivityAt)}
+                        </span>
+                      </Link>
+                      <FavoriteButton type="market" id={market.marketId} size="small" />
+                    </div>
                   ))}
                 </div>
               )}
