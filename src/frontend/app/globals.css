@@ -513,3 +513,57 @@ td a:hover {
   color: #9a9aa8;
   margin-top: 2px;
 }
+
+/* Notification settings (Phase 5.3) */
+.settings-status {
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+
+.settings-hint {
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+
+.settings-hint-error {
+  color: #d96867;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 0;
+}
+
+.settings-section {
+  margin: 20px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.settings-section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9a9aa8;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.settings-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 5px 0;
+  cursor: pointer;
+}
+
+.settings-checkbox-row input[type='checkbox'] {
+  accent-color: #7fb8e0;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
