@@ -13,6 +13,7 @@ import {
   type WalletScoreSnapshotResult,
 } from '../../db/repositories/walletScoresRepository.js';
 import { getMarketSignalCounts } from '../../db/repositories/signalsRepository.js';
+import { MIN_SIGNIFICANT_TRADE_USD } from '../../config/tradeThresholds.js';
 import { SMART_WALLET_MIN_SCORE, type TrendingMarketInput } from './computeTrendingMarketScore.js';
 
 /** Candidate pool fetched from `trades` before scoring — generous for the same reason `gatherTrendingInput.ts`'s equivalent constant is: the API's requested `limit` is how many *scored* markets to return, not how many to consider. */
@@ -33,7 +34,11 @@ export async function gatherTrendingMarketsInput(
   lookbackMinutes: number,
   candidateLimit = DEFAULT_CANDIDATE_LIMIT,
 ): Promise<TrendingMarketInput[]> {
-  const activityWindows = await getMarketActivityWindows(lookbackMinutes, candidateLimit);
+  // Stage 1 Stabilization Fix 1: Trending Market Score ignores trades
+  // below the shared threshold entirely.
+  const activityWindows = await getMarketActivityWindows(lookbackMinutes, candidateLimit, {
+    minAmountUsd: MIN_SIGNIFICANT_TRADE_USD,
+  });
   const marketIds = activityWindows.map((activity) => activity.marketId);
 
   const [traderWalletsByMarket, signalCounts] = await Promise.all([
@@ -82,7 +87,10 @@ export async function gatherTrendingMarketInputForMarket(
   lookbackMinutes: number,
 ): Promise<TrendingMarketInput | null> {
   const [activityWindows, signalCounts] = await Promise.all([
-    getMarketActivityWindows(lookbackMinutes, 1, { marketId }),
+    getMarketActivityWindows(lookbackMinutes, 1, {
+      marketId,
+      minAmountUsd: MIN_SIGNIFICANT_TRADE_USD,
+    }),
     getMarketSignalCounts([marketId], lookbackMinutes),
   ]);
 

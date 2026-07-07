@@ -151,6 +151,8 @@ export async function getRecentActiveWallets(
 export interface GetRecentTradesWithinMinutesOptions {
   /** Default: 2000 — generous enough for a busy `lookbackMinutes` window without being unbounded. */
   limit?: number;
+  /** Omitted = no floor (existing behavior). Stage 1 Stabilization Fix 1: signal detection passes `MIN_SIGNIFICANT_TRADE_USD` here so every detector only ever sees qualifying trades. */
+  minAmountUsd?: number;
 }
 
 /**
@@ -169,14 +171,23 @@ export async function getRecentTradesWithinMinutes(
 ): Promise<Trade[]> {
   const limit = options.limit ?? 2000;
   const pool = getPool();
+
+  const conditions = ['upstream_timestamp >= now() - make_interval(mins => $1)'];
+  const params: unknown[] = [minutes];
+  if (options.minAmountUsd !== undefined) {
+    params.push(options.minAmountUsd);
+    conditions.push(`amount_usd >= $${params.length}`);
+  }
+  params.push(limit);
+
   const result = await pool.query<TradeRow>(
     `SELECT id, owner_pubkey, market_id, event_id, action, side, amount_usd, price_usd,
             event_title, market_title, message, is_team_market, upstream_timestamp, observed_at
      FROM trades
-     WHERE upstream_timestamp >= now() - make_interval(mins => $1)
+     WHERE ${conditions.join(' AND ')}
      ORDER BY upstream_timestamp DESC
-     LIMIT $2`,
-    [minutes, limit],
+     LIMIT $${params.length}`,
+    params,
   );
   return result.rows.map(rowToTrade);
 }
@@ -222,6 +233,8 @@ export interface GetRecentTradesOptions {
   limit?: number;
   marketId?: string;
   ownerPubkey?: string;
+  /** Omitted = no floor (existing behavior — `getAllTradesForWallet`/`getAllTradesForMarket` deliberately never set this, since wallet/market pages show every trade). Stage 1 Stabilization Fix 1: the Live Feed route passes `MIN_SIGNIFICANT_TRADE_USD` here. */
+  minAmountUsd?: number;
 }
 
 /** Read path for the API layer (`GET /api/trades/recent`) — filterable, ordered most-recent-first by upstream trade timestamp. */
@@ -238,6 +251,10 @@ export async function getRecentTrades(options: GetRecentTradesOptions = {}): Pro
   if (options.ownerPubkey) {
     params.push(options.ownerPubkey);
     conditions.push(`owner_pubkey = $${params.length}`);
+  }
+  if (options.minAmountUsd !== undefined) {
+    params.push(options.minAmountUsd);
+    conditions.push(`amount_usd >= $${params.length}`);
   }
   params.push(limit);
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -284,6 +301,8 @@ export interface GetTradesSinceOptions {
   ownerPubkey?: string;
   /** Safety cap so a stream resuming after a long gap can't return unbounded rows in one poll. Default: 500. */
   limit?: number;
+  /** Omitted = no floor (existing behavior). Stage 1 Stabilization Fix 1: the Live Feed SSE poll passes `MIN_SIGNIFICANT_TRADE_USD` here so sub-threshold trades are never emitted. */
+  minAmountUsd?: number;
 }
 
 /**
@@ -317,6 +336,10 @@ export async function getTradesSince(
   if (options.ownerPubkey) {
     params.push(options.ownerPubkey);
     conditions.push(`owner_pubkey = $${params.length}`);
+  }
+  if (options.minAmountUsd !== undefined) {
+    params.push(options.minAmountUsd);
+    conditions.push(`amount_usd >= $${params.length}`);
   }
   params.push(limit);
 
@@ -431,11 +454,24 @@ interface WalletActivityWindowRow {
  * real fix: backing this off the still-unused `wallets.first_seen_at`
  * column from `001_init.sql` instead of scanning `trades` for it).
  */
+export interface GetWalletActivityWindowsOptions {
+  /** Omitted = no floor (existing behavior). Stage 1 Stabilization Fix 1: `gatherTrendingInput.ts` passes `MIN_SIGNIFICANT_TRADE_USD` here so the whole Trending Wallet Score computation (including `firstTradeAt`/`lastTradeAt`) treats sub-threshold trades as if they never happened. */
+  minAmountUsd?: number;
+}
+
 export async function getWalletActivityWindows(
   recentMinutes: number,
   limit = 500,
+  options: GetWalletActivityWindowsOptions = {},
 ): Promise<WalletActivityWindow[]> {
   const pool = getPool();
+  const params: unknown[] = [recentMinutes, limit];
+  let amountFilter = '';
+  if (options.minAmountUsd !== undefined) {
+    params.push(options.minAmountUsd);
+    amountFilter = `WHERE amount_usd >= $${params.length}`;
+  }
+
   const result = await pool.query<WalletActivityWindowRow>(
     `SELECT owner_pubkey,
             COUNT(*) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) AS recent_trade_count,
@@ -451,11 +487,12 @@ export async function getWalletActivityWindows(
             MIN(upstream_timestamp) AS first_trade_at,
             MAX(upstream_timestamp) AS last_trade_at
      FROM trades
+     ${amountFilter}
      GROUP BY owner_pubkey
      HAVING COUNT(*) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) > 0
      ORDER BY COUNT(*) FILTER (WHERE upstream_timestamp >= now() - make_interval(mins => $1)) DESC
      LIMIT $2`,
-    [recentMinutes, limit],
+    params,
   );
 
   return result.rows.map((row) => ({
@@ -513,6 +550,8 @@ export interface GetMarketActivityWindowsOptions {
    * identically to how Phase 4.2 left it.
    */
   marketId?: string;
+  /** Omitted = no floor (existing behavior). Stage 1 Stabilization Fix 1: `gatherTrendingMarketsInput.ts` passes `MIN_SIGNIFICANT_TRADE_USD` here so Trending Market Score treats sub-threshold trades as if they never happened. */
+  minAmountUsd?: number;
 }
 
 export async function getMarketActivityWindows(
@@ -526,6 +565,10 @@ export async function getMarketActivityWindows(
   if (options.marketId !== undefined) {
     params.push(options.marketId);
     marketFilter = `AND market_id = $${params.length}`;
+  }
+  if (options.minAmountUsd !== undefined) {
+    params.push(options.minAmountUsd);
+    marketFilter += ` AND amount_usd >= $${params.length}`;
   }
 
   const result = await pool.query<MarketActivityWindowRow>(

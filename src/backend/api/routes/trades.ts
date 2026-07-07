@@ -5,6 +5,14 @@
  * Both are read-only against Postgres (never a live upstream call) and
  * never trigger ingestion — they only ever see whatever the ingestion
  * jobs (`src/backend/jobs/ingest*.ts`) already wrote.
+ *
+ * Stage 1 Stabilization Fix 1: both routes are the "Live Feed" and both
+ * apply `MIN_SIGNIFICANT_TRADE_USD` (`../../config/tradeThresholds.js`)
+ * as a floor on `amount_usd` at the query layer, so sub-threshold trades
+ * are never fetched from Postgres in the first place — the SSE stream
+ * never emits them, and there is no separate frontend filter. This does
+ * not touch ingestion or the `trades` table: every trade is still
+ * written regardless of size.
  */
 import { Router } from 'express';
 import {
@@ -14,6 +22,7 @@ import {
   type GetTradesSinceOptions,
 } from '../../db/repositories/tradesRepository.js';
 import { firstQueryString, parseLimitParam, type ParseLimitResult } from '../queryParams.js';
+import { MIN_SIGNIFICANT_TRADE_USD } from '../../config/tradeThresholds.js';
 
 export const tradesRouter = Router();
 
@@ -35,14 +44,14 @@ function parseTradeFilters(query: Record<string, unknown>): TradeFilters {
 }
 
 function buildRecentTradesOptions(limit: number, filters: TradeFilters): GetRecentTradesOptions {
-  const options: GetRecentTradesOptions = { limit };
+  const options: GetRecentTradesOptions = { limit, minAmountUsd: MIN_SIGNIFICANT_TRADE_USD };
   if (filters.marketId !== undefined) options.marketId = filters.marketId;
   if (filters.ownerPubkey !== undefined) options.ownerPubkey = filters.ownerPubkey;
   return options;
 }
 
 function buildTradesSinceOptions(filters: TradeFilters): GetTradesSinceOptions {
-  const options: GetTradesSinceOptions = {};
+  const options: GetTradesSinceOptions = { minAmountUsd: MIN_SIGNIFICANT_TRADE_USD };
   if (filters.marketId !== undefined) options.marketId = filters.marketId;
   if (filters.ownerPubkey !== undefined) options.ownerPubkey = filters.ownerPubkey;
   return options;

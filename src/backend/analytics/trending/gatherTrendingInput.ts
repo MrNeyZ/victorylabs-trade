@@ -8,6 +8,7 @@
 import { getWalletActivityWindows } from '../../db/repositories/tradesRepository.js';
 import { getLatestScoresForWallets } from '../../db/repositories/walletScoresRepository.js';
 import { getWalletSignalCounts } from '../../db/repositories/signalsRepository.js';
+import { MIN_SIGNIFICANT_TRADE_USD } from '../../config/tradeThresholds.js';
 import type { TrendingWalletInput } from './computeTrendingScore.js';
 
 /** Candidate pool fetched from `trades` before scoring — generous for the same reason `gatherDashboardData.ts`'s `ACTIVE_WALLET_CANDIDATE_POOL` is: the API/dashboard's requested `limit` is how many *scored* wallets to return, not how many to consider. */
@@ -17,7 +18,12 @@ export async function gatherTrendingInput(
   lookbackMinutes: number,
   candidateLimit = DEFAULT_CANDIDATE_LIMIT,
 ): Promise<TrendingWalletInput[]> {
-  const activityWindows = await getWalletActivityWindows(lookbackMinutes, candidateLimit);
+  // Stage 1 Stabilization Fix 1: Trending Wallet Score ignores trades
+  // below the shared threshold entirely (including for `firstTradeAt`/
+  // `lastTradeAt` — see `getWalletActivityWindows`'s doc comment).
+  const activityWindows = await getWalletActivityWindows(lookbackMinutes, candidateLimit, {
+    minAmountUsd: MIN_SIGNIFICANT_TRADE_USD,
+  });
   const walletPubkeys = activityWindows.map((activity) => activity.walletPubkey);
 
   const [scores, signalCounts] = await Promise.all([
