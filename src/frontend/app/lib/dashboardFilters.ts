@@ -27,11 +27,18 @@ export const DEFAULT_DASHBOARD_FILTERS: DashboardFilters = {
   sortDirection: 'desc',
 };
 
+/**
+ * Deliberately no "7d" option: `/api/signals/recent` (Phase 5.4's "Latest
+ * Signals" source) silently clamps `lookbackMinutes` to 1440, while
+ * `/api/dashboard`/`/api/trending/*` genuinely honor 7 days — offering 7d
+ * here would make "Latest Signals" quietly stop matching every other
+ * section's window. Not fixed by touching that endpoint (out of scope);
+ * fixed by not offering a lookback this dashboard can't honor everywhere.
+ */
 export const LOOKBACK_OPTIONS: ReadonlyArray<{ label: string; minutes: number }> = [
   { label: '1h', minutes: 60 },
   { label: '6h', minutes: 360 },
   { label: '24h', minutes: 1440 },
-  { label: '7d', minutes: 10_080 },
 ];
 
 export const SIGNAL_TYPE_FILTER_OPTIONS: ReadonlyArray<{
@@ -48,18 +55,42 @@ export const SIGNAL_TYPE_FILTER_OPTIONS: ReadonlyArray<{
 const VALID_LOOKBACK_MINUTES = LOOKBACK_OPTIONS.map((option) => option.minutes);
 const VALID_SIGNAL_TYPES = SIGNAL_TYPE_FILTER_OPTIONS.map((option) => option.value);
 
-function isDashboardFilters(value: unknown): value is DashboardFilters {
-  if (typeof value !== 'object' || value === null) return false;
+/**
+ * Per-field migration, not all-or-nothing validation: a stored value from
+ * a previous build (e.g. `lookbackMinutes: 10_080` from before "7d" was
+ * removed) falls back to just that field's default, rather than
+ * discarding an otherwise-valid `signalType`/`minSmartScore`/
+ * `sortDirection` the user had also set. Every branch below reads from
+ * `DEFAULT_DASHBOARD_FILTERS` rather than a hardcoded literal, so a future
+ * default change can't drift out of sync with this fallback.
+ */
+function migrateDashboardFilters(value: unknown): DashboardFilters {
+  if (typeof value !== 'object' || value === null) return DEFAULT_DASHBOARD_FILTERS;
   const candidate = value as Record<string, unknown>;
-  return (
+
+  const lookbackMinutes =
     typeof candidate['lookbackMinutes'] === 'number' &&
-    VALID_LOOKBACK_MINUTES.includes(candidate['lookbackMinutes']) &&
+    VALID_LOOKBACK_MINUTES.includes(candidate['lookbackMinutes'])
+      ? candidate['lookbackMinutes']
+      : DEFAULT_DASHBOARD_FILTERS.lookbackMinutes;
+
+  const signalType =
     typeof candidate['signalType'] === 'string' &&
-    VALID_SIGNAL_TYPES.includes(candidate['signalType'] as SignalType | 'all') &&
-    typeof candidate['minSmartScore'] === 'number' &&
-    Number.isFinite(candidate['minSmartScore']) &&
-    (candidate['sortDirection'] === 'asc' || candidate['sortDirection'] === 'desc')
-  );
+    VALID_SIGNAL_TYPES.includes(candidate['signalType'] as SignalType | 'all')
+      ? (candidate['signalType'] as SignalType | 'all')
+      : DEFAULT_DASHBOARD_FILTERS.signalType;
+
+  const minSmartScore =
+    typeof candidate['minSmartScore'] === 'number' && Number.isFinite(candidate['minSmartScore'])
+      ? candidate['minSmartScore']
+      : DEFAULT_DASHBOARD_FILTERS.minSmartScore;
+
+  const sortDirection =
+    candidate['sortDirection'] === 'asc' || candidate['sortDirection'] === 'desc'
+      ? candidate['sortDirection']
+      : DEFAULT_DASHBOARD_FILTERS.sortDirection;
+
+  return { lookbackMinutes, signalType, minSmartScore, sortDirection };
 }
 
 function readDashboardFilters(): DashboardFilters {
@@ -68,7 +99,7 @@ function readDashboardFilters(): DashboardFilters {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw === null) return DEFAULT_DASHBOARD_FILTERS;
     const parsed: unknown = JSON.parse(raw);
-    return isDashboardFilters(parsed) ? parsed : DEFAULT_DASHBOARD_FILTERS;
+    return migrateDashboardFilters(parsed);
   } catch {
     // Corrupt/unparseable localStorage content — same "treat as empty
     // default" fallback `./watchlist.ts`'s `readWatchlist` uses.
@@ -92,7 +123,18 @@ export function useDashboardFilters() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setFilters(readDashboardFilters());
+    // `readDashboardFilters` already migrates any per-field invalid value
+    // (e.g. a since-removed "7d" lookback) back to its default. Only
+    // rewrite `localStorage` when a stored value actually needed
+    // migrating (`raw` present but not already the canonical/migrated
+    // JSON) — a first-ever visit (`raw === null`) shouldn't write
+    // anything until the user actually touches a control.
+    const raw = typeof window === 'undefined' ? null : window.localStorage.getItem(STORAGE_KEY);
+    const migrated = readDashboardFilters();
+    if (raw !== null && raw !== JSON.stringify(migrated)) {
+      writeDashboardFilters(migrated);
+    }
+    setFilters(migrated);
     setHydrated(true);
   }, []);
 
