@@ -339,6 +339,68 @@ td a:hover {
   font-size: 12px;
 }
 
+/* Dashboard filters (Phase 5.4) */
+.filter-bar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0 0 18px;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9a9aa8;
+}
+
+.filter-field select,
+.filter-field input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e6e6ea;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  min-width: 90px;
+}
+
+.filter-field input[type='number'] {
+  width: 70px;
+}
+
+.filter-field select:focus,
+.filter-field input:focus {
+  outline: 1px solid #7fb8e0;
+}
+
+.reset-button {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #9a9aa8;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.reset-button:hover {
+  color: #e6e6ea;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.filter-updating {
+  align-self: center;
+}
+
 .status-row {
   display: flex;
   align-items: center;

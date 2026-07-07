@@ -13,6 +13,9 @@ import {
 import { EmptyState } from '../components/EmptyState';
 import { SectionCard } from '../components/SectionCard';
 import { RefreshBar } from '../components/RefreshBar';
+import { FilterBar } from '../components/FilterBar';
+import type { SignalType } from '../lib/notifications';
+import { applySortDirection, useDashboardFilters } from '../lib/dashboardFilters';
 
 /**
  * Same fallback/reasoning as `app/page.tsx` — Next's env-file loading is
@@ -21,9 +24,10 @@ import { RefreshBar } from '../components/RefreshBar';
  */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4100';
 
-type LoadState = 'loading' | 'loaded' | 'error';
+/** Matches `/api/dashboard`'s own `DEFAULT_LIMIT` — keeps the "Latest Signals" row count identical to before Phase 5.4, when that table read `DashboardResponse.signals` instead of its own `/api/signals/recent` request. */
+const RECENT_SIGNALS_LIMIT = 20;
 
-type SignalType = 'smart_wallet_trade' | 'elite_wallet_trade' | 'market_consensus' | 'whale_trade';
+type LoadState = 'loading' | 'loaded' | 'error';
 
 interface SignalScoreContextEntry {
   walletPubkey: string;
@@ -110,6 +114,14 @@ interface TrendingMarketsResponse {
   lookbackMinutes: number;
   limit: number;
   markets: TrendingMarket[];
+}
+
+/** Mirrors `GET /api/signals/recent`'s default (`source=persisted`) response shape — Phase 5.4 is the first thing on this page to call this endpoint directly (previously "Latest Signals" only ever read `DashboardResponse.signals`, which isn't itself filterable by type without a second `/api/dashboard` round trip). */
+interface RecentSignalsResponse {
+  source: 'persisted';
+  lookbackMinutes: number;
+  limit: number;
+  signals: PersistedSignal[];
 }
 
 function SignalsTable({
@@ -324,10 +336,13 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [trendingWallets, setTrendingWallets] = useState<TrendingWallet[]>([]);
   const [trendingMarkets, setTrendingMarkets] = useState<TrendingMarket[]>([]);
+  const [recentSignals, setRecentSignals] = useState<PersistedSignal[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+
+  const { filters, hydrated, updateFilters, resetFilters } = useDashboardFilters();
 
   // Guards every setState below against firing after unmount — shared by
   // both the mount-time load and the refresh button's click handler, so
@@ -341,79 +356,169 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const loadDashboard = useCallback((isInitial: boolean) => {
-    if (isInitial) {
-      setState('loading');
-    } else {
-      setIsRefreshing(true);
-      setRefreshError(null);
-    }
+  const lookbackMinutes = filters.lookbackMinutes;
 
-    const dashboardRequest = fetch(`${API_BASE_URL}/api/dashboard`).then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`Dashboard request failed (HTTP ${response.status})`);
+  const loadDashboard = useCallback(
+    (isInitial: boolean) => {
+      if (isInitial) {
+        setState('loading');
+      } else {
+        setIsRefreshing(true);
+        setRefreshError(null);
       }
-      return (await response.json()) as DashboardResponse;
-    });
 
-    // A separate endpoint (`GET /api/trending/wallets`, Phase 4.1), fetched
-    // alongside the dashboard's own request rather than added to the
-    // dashboard's response — the trending card is still part of this one
-    // page/refresh cycle, it just composes two independent API calls.
-    const trendingRequest = fetch(`${API_BASE_URL}/api/trending/wallets`).then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`Trending wallets request failed (HTTP ${response.status})`);
-      }
-      return (await response.json()) as TrendingWalletsResponse;
-    });
+      const lookbackQuery = `lookbackMinutes=${lookbackMinutes}`;
 
-    // Same reasoning as `trendingRequest` above — a separate endpoint
-    // (`GET /api/trending/markets`, Phase 4.2), fetched alongside the
-    // other two and folded into this one page's refresh cycle.
-    const trendingMarketsRequest = fetch(`${API_BASE_URL}/api/trending/markets`).then(
-      async (response) => {
+      const dashboardRequest = fetch(`${API_BASE_URL}/api/dashboard?${lookbackQuery}`).then(
+        async (response) => {
+          if (!response.ok) {
+            throw new Error(`Dashboard request failed (HTTP ${response.status})`);
+          }
+          return (await response.json()) as DashboardResponse;
+        },
+      );
+
+      // A separate endpoint (`GET /api/trending/wallets`, Phase 4.1), fetched
+      // alongside the dashboard's own request rather than added to the
+      // dashboard's response — the trending card is still part of this one
+      // page/refresh cycle, it just composes two independent API calls.
+      const trendingRequest = fetch(`${API_BASE_URL}/api/trending/wallets?${lookbackQuery}`).then(
+        async (response) => {
+          if (!response.ok) {
+            throw new Error(`Trending wallets request failed (HTTP ${response.status})`);
+          }
+          return (await response.json()) as TrendingWalletsResponse;
+        },
+      );
+
+      // Same reasoning as `trendingRequest` above — a separate endpoint
+      // (`GET /api/trending/markets`, Phase 4.2), fetched alongside the
+      // other two and folded into this one page's refresh cycle.
+      const trendingMarketsRequest = fetch(
+        `${API_BASE_URL}/api/trending/markets?${lookbackQuery}`,
+      ).then(async (response) => {
         if (!response.ok) {
           throw new Error(`Trending markets request failed (HTTP ${response.status})`);
         }
         return (await response.json()) as TrendingMarketsResponse;
-      },
-    );
-
-    return Promise.all([dashboardRequest, trendingRequest, trendingMarketsRequest])
-      .then(([dashboardPayload, trendingPayload, trendingMarketsPayload]) => {
-        if (!mountedRef.current) return;
-        setData(dashboardPayload);
-        setTrendingWallets(trendingPayload.wallets);
-        setTrendingMarkets(trendingMarketsPayload.markets);
-        setState('loaded');
-        setLastUpdatedAt(new Date());
-      })
-      .catch((err: unknown) => {
-        if (!mountedRef.current) return;
-        const message = err instanceof Error ? err.message : 'Failed to load dashboard';
-        // A failed *refresh* keeps whatever data is already on screen —
-        // only a failed *initial* load has nothing to fall back to, so
-        // only that case replaces the page with the error state.
-        if (isInitial) {
-          setErrorMessage(message);
-          setState('error');
-        } else {
-          setRefreshError(message);
-        }
-      })
-      .finally(() => {
-        if (!mountedRef.current) return;
-        if (!isInitial) setIsRefreshing(false);
       });
-  }, []);
 
+      // `GET /api/signals/recent` (persisted, Phase 3.5/3.6) — Phase 5.4
+      // switches "Latest Signals" to this endpoint instead of
+      // `DashboardResponse.signals` so the signal-type filter has a
+      // dedicated, independently-lookback-scoped list to filter client-side
+      // (see `filteredRecentSignals` below). `limit` is fixed at
+      // `RECENT_SIGNALS_LIMIT` to match `/api/dashboard`'s own default, so
+      // the row count is unchanged from before this phase.
+      const recentSignalsRequest = fetch(
+        `${API_BASE_URL}/api/signals/recent?${lookbackQuery}&limit=${RECENT_SIGNALS_LIMIT}`,
+      ).then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Recent signals request failed (HTTP ${response.status})`);
+        }
+        return (await response.json()) as RecentSignalsResponse;
+      });
+
+      return Promise.all([
+        dashboardRequest,
+        trendingRequest,
+        trendingMarketsRequest,
+        recentSignalsRequest,
+      ])
+        .then(([dashboardPayload, trendingPayload, trendingMarketsPayload, recentSignalsPayload]) => {
+          if (!mountedRef.current) return;
+          setData(dashboardPayload);
+          setTrendingWallets(trendingPayload.wallets);
+          setTrendingMarkets(trendingMarketsPayload.markets);
+          setRecentSignals(recentSignalsPayload.signals);
+          setState('loaded');
+          setLastUpdatedAt(new Date());
+        })
+        .catch((err: unknown) => {
+          if (!mountedRef.current) return;
+          const message = err instanceof Error ? err.message : 'Failed to load dashboard';
+          // A failed *refresh* (including one triggered by a lookback
+          // change) keeps whatever data is already on screen — only a
+          // failed *initial* load has nothing to fall back to, so only
+          // that case replaces the page with the error state.
+          if (isInitial) {
+            setErrorMessage(message);
+            setState('error');
+          } else {
+            setRefreshError(message);
+          }
+        })
+        .finally(() => {
+          if (!mountedRef.current) return;
+          if (!isInitial) setIsRefreshing(false);
+        });
+    },
+    [lookbackMinutes],
+  );
+
+  // Waits on `hydrated` so the very first fetch already uses whatever
+  // lookback was persisted in `localStorage`, instead of firing once with
+  // the default and again moments later once the real value loads. Every
+  // subsequent `lookbackMinutes` change (dropdown or `resetFilters`) is a
+  // *refresh*, not a fresh initial load — same "preserve last-good data
+  // on failure" path a manual Refresh click uses.
+  const isFirstLoadRef = useRef(true);
   useEffect(() => {
-    void loadDashboard(true);
-  }, [loadDashboard]);
+    if (!hydrated) return;
+    if (isFirstLoadRef.current) {
+      isFirstLoadRef.current = false;
+      void loadDashboard(true);
+      return;
+    }
+    void loadDashboard(false);
+  }, [hydrated, loadDashboard]);
+
+  // Everything below is a client-side re-derivation of already-fetched
+  // data — none of it triggers a request. `signalType`/`minSmartScore`
+  // filtering and `sortDirection` only touch the sections named in this
+  // phase's brief ("min score affects smart wallet sections"); Whale
+  // Trades/Market Consensus stay type-locked and time-ordered as before,
+  // and market sections have no per-row Smart Score to filter by.
+  const filteredRecentSignals = recentSignals.filter(
+    (signal) => filters.signalType === 'all' || signal.type === filters.signalType,
+  );
+
+  const filteredTopWallets = data
+    ? applySortDirection(
+        data.topWallets.filter((wallet) => wallet.score >= filters.minSmartScore),
+        filters.sortDirection,
+      )
+    : [];
+
+  const filteredActiveSmartWallets = data
+    ? applySortDirection(
+        data.activeSmartWallets.filter((wallet) => wallet.score >= filters.minSmartScore),
+        filters.sortDirection,
+      )
+    : [];
+
+  const filteredTrendingWallets = applySortDirection(
+    trendingWallets.filter(
+      (wallet) =>
+        filters.minSmartScore <= 0 ||
+        (wallet.latestSmartScore !== null && wallet.latestSmartScore >= filters.minSmartScore),
+    ),
+    filters.sortDirection,
+  );
+
+  const sortedTopMarkets = data ? applySortDirection(data.topMarkets, filters.sortDirection) : [];
+  const sortedTrendingMarkets = applySortDirection(trendingMarkets, filters.sortDirection);
 
   return (
     <main>
       <h1>Smart Money Dashboard</h1>
+
+      <FilterBar
+        filters={filters}
+        isUpdating={isRefreshing}
+        onChange={updateFilters}
+        onReset={resetFilters}
+      />
 
       {state === 'loading' && <p className="loading-state">Loading dashboard…</p>}
 
@@ -435,14 +540,14 @@ export default function DashboardPage() {
           <div className="dashboard-grid">
             <SectionCard title="Latest Signals">
               <SignalsTable
-                signals={data.signals}
+                signals={filteredRecentSignals}
                 emptyMessage="No signals detected in this window."
               />
             </SectionCard>
 
             <SectionCard title="Top Smart Score Wallets">
               <WalletScoreTable
-                wallets={data.topWallets}
+                wallets={filteredTopWallets}
                 emptyMessage="No scored wallets yet — run analytics:scores."
               />
             </SectionCard>
@@ -462,22 +567,22 @@ export default function DashboardPage() {
             </SectionCard>
 
             <SectionCard title="Top Active Markets">
-              <TopMarketsTable markets={data.topMarkets} />
+              <TopMarketsTable markets={sortedTopMarkets} />
             </SectionCard>
 
             <SectionCard title="Active Smart Wallets">
               <WalletScoreTable
-                wallets={data.activeSmartWallets}
+                wallets={filteredActiveSmartWallets}
                 emptyMessage="No recently active wallets meet the smart-score bar."
               />
             </SectionCard>
 
             <SectionCard title="Trending Wallets">
-              <TrendingWalletsTable wallets={trendingWallets} />
+              <TrendingWalletsTable wallets={filteredTrendingWallets} />
             </SectionCard>
 
             <SectionCard title="Trending Markets">
-              <TrendingMarketsTable markets={trendingMarkets} />
+              <TrendingMarketsTable markets={sortedTrendingMarkets} />
             </SectionCard>
           </div>
         </>
