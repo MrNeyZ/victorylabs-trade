@@ -81,7 +81,13 @@ actually built and running today, not what's planned.
   persisted history (`/api/scores/latest`, `latestSmartScore` on
   `/api/wallets/:walletPubkey`) exist, but no UI renders either yet —
   same gap as leaderboard/wallet-detail pages above.
-- **No scheduled/always-on ingestion.** Every ingestion job is a bounded,
+- **No scheduled/always-on ingestion.** *(Update, Phase 6.1: resolved for
+  `/trades` specifically — a dedicated PM2 worker,
+  `vltrade-trades-poller`, now polls it continuously; see `README.md`
+  §13. This snapshot's "Phase 2.10" description below is otherwise left
+  as-is for historical accuracy, and still fully applies to
+  `/history`/`/positions`/`/profiles`/leaderboard/Smart-Score ingestion,
+  none of which are scheduled yet.)* Every ingestion job is a bounded,
   manually-invoked run (or a bounded poll with a hard iteration cap). There
   is no cron, systemd timer, or in-repo scheduler keeping the database
   continuously fresh — recency depends entirely on whoever last ran a job.
@@ -142,7 +148,10 @@ actually built and running today, not what's planned.
 2. **Register a real API key** once the above clears, and re-validate the
    documented rate limits (`docs/rest-api-capabilities.md` §4) at the
    Developer tier instead of keyless.
-3. **Scheduled ingestion** — replace manual/bounded job invocations with
+3. **Scheduled ingestion** *(Update, Phase 6.1: done for `/trades`, via
+   PM2 — see `README.md` §13; the "no PM2/Docker" constraint below was a
+   Phase 2.10-era description, since superseded by Phase 4.5's actual
+   deployment)* — replace manual/bounded job invocations with
    something that keeps running (a cron-style scheduler, still no
    PM2/Docker per this project's standing constraints) so the database
    stays fresh without a human re-running commands.

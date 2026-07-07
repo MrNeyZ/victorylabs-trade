@@ -245,8 +245,11 @@ Full detail in [`docs/mvp-status.md`](./docs/mvp-status.md). Headlines:
   leaderboard pages have backend endpoints but no UI yet.
 - No smart-money scoring/derivation logic exists — data is ingested and
   served as Jupiter computed it, nothing ranks or flags wallets yet.
-- No scheduled/always-on ingestion — every job is a bounded, manually-run
-  process; the database only stays fresh if someone re-runs the jobs.
+- ~~No scheduled/always-on ingestion~~ **Resolved, Phase 6.1**: `/trades`
+  now has a dedicated always-on PM2 worker (`vltrade-trades-poller`, see
+  §13) polling every 15s, forever, with per-iteration duplicate
+  protection and exception resilience. `/history`/`/positions`/
+  `/profiles`/leaderboard ingestion are still bounded, manually-run jobs.
 - `/history` ingestion fetches only the first page per wallet, not a full
   paginated backfill.
 - No registered API key, no auth in front of the backend, CORS wide open.
@@ -261,8 +264,9 @@ Full detail in [`docs/mvp-status.md`](./docs/mvp-status.md). Headlines:
    License Agreement (`docs/jupiter-prediction-discovery.md` §7.6); confirm
    hosting-jurisdiction geo-restrictions. Only after that: register a real
    API key.
-2. **Scheduled ingestion** — something that keeps the database fresh
-   without a human re-running bounded jobs (still no PM2/Docker).
+2. ~~**Scheduled ingestion**~~ **Done for `/trades` (Phase 6.1)** — see
+   §13. `/history`/`/positions`/`/profiles`/leaderboards remain bounded,
+   manually-run jobs; scheduling those too is still open.
 3. **Wallet + leaderboard frontend pages** on top of the endpoints that
    already exist.
 4. **Smart-money scoring** — the actual point of this project; deferred
@@ -362,8 +366,8 @@ frontend, backend, or database goes down, see
 | Directory     | `/root/vl-trade` (this repo, `main` branch)                                                                                                                                                    |
 | Backend port  | `4100` (bound to `127.0.0.1` only, not internet-reachable — ufw default-denies everything except 22/80/443, and 80/443 accept only Cloudflare's IP ranges)                                     |
 | Frontend port | `4200` (same isolation as the backend)                                                                                                                                                         |
-| PM2 processes | `vltrade-backend`, `vltrade-frontend` (see `ecosystem.config.cjs`)                                                                                                                             |
-| nginx site    | `/etc/nginx/sites-available/vltrade` (symlinked into `sites-enabled/vltrade`)                                                                                                                  |
+| PM2 processes | `vltrade-backend`, `vltrade-frontend`, `vltrade-trades-poller` (Phase 6.1 — no port, writes to Postgres only; see `ecosystem.config.cjs`)                                                       |
+| nginx site    | `/etc/nginx/sites-available/vltrade` (symlinked into `sites-enabled/vltrade`) — backend/frontend only, the poller has no nginx entry                                                            |
 | Database      | Postgres role `vltrade`, database `vltrade` (dedicated, not shared with other projects)                                                                                                        |
 | TLS           | Cloudflare Origin Certificate — the same wildcard cert (`*.victorylabs.app`) `nft-live-feed`/`wallet-checker` already use, at `/etc/nginx/ssl/{cert,key}.pem`. No new certificate was created. |
 
@@ -374,7 +378,19 @@ Browser ──HTTPS──▶ Cloudflare ──HTTPS (Origin Cert)──▶ nginx
                                                           │
                                     /api/*, /health  ─────┼──▶ vltrade-backend  (127.0.0.1:4100, PM2, tsx)
                                     everything else  ─────┴──▶ vltrade-frontend (127.0.0.1:4200, PM2, next start)
+
+vltrade-trades-poller (PM2, tsx, no port, no nginx entry)
+        │
+        └──▶ Jupiter Predict REST API (GET /trades, every 15s, forever)
+        └──▶ Postgres `vltrade` (same DB vltrade-backend reads from)
 ```
+
+`vltrade-trades-poller` (Phase 6.1) is the one process in this stack with
+no inbound path at all — nothing connects to it, it only calls out to
+Jupiter and writes to Postgres. `vltrade-backend`'s `/api/trades/stream`
+picks up whatever it writes on its own next 5s poll of the same table —
+the two processes never talk to each other directly, only through
+Postgres.
 
 The frontend's production build has `NEXT_PUBLIC_API_BASE_URL` set to an
 **empty string** (`src/frontend/.env.production`) rather than an absolute
@@ -400,20 +416,34 @@ an option for production regardless.
 pm2 list                              # status of all processes on this VPS (not just vltrade's)
 pm2 logs vltrade-backend              # tail backend stdout+stderr
 pm2 logs vltrade-frontend             # tail frontend stdout+stderr
+pm2 logs vltrade-trades-poller        # tail the continuous trades-ingestion daemon
 pm2 restart vltrade-backend           # restart just the backend
 pm2 restart vltrade-frontend          # restart just the frontend
-pm2 restart vltrade-backend vltrade-frontend   # restart both
-pm2 stop vltrade-backend vltrade-frontend      # stop both (does not remove them)
-pm2 describe vltrade-backend          # full process detail (cwd, script, memory, restarts)
+pm2 restart vltrade-trades-poller     # restart just the poller (safe — it's stateless between polls)
+pm2 restart vltrade-backend vltrade-frontend vltrade-trades-poller   # restart all three
+pm2 stop vltrade-trades-poller        # stop continuous ingestion (does not remove it; SIGTERM, graceful — finishes the in-flight poll first)
+pm2 describe vltrade-trades-poller    # full process detail (cwd, script, memory, restarts)
 pm2 save                              # persist the current process list so it survives a host reboot
 ```
 
 `pm2 restart`/`pm2 stop`/`pm2 logs` scoped to `vltrade-backend`/
-`vltrade-frontend` by name only ever affect these two processes — they do
-not touch `nft-backend`, `nft-frontend`, `wallet-checker-backend`, or
-`wallet-checker-web`.
+`vltrade-frontend`/`vltrade-trades-poller` by name only ever affect these
+processes — they do not touch `nft-backend`, `nft-frontend`,
+`wallet-checker-backend`, or `wallet-checker-web`.
 
-Logs also live on disk at `/root/vl-trade/logs/{backend,frontend}.{out,err}.log`
+**Inspecting the poller specifically**: each iteration logs one line
+tagged `[trade-poller]` with `fetched=`/`new=`/`duplicates=`/`duration=`/
+`latestObservedAt=` — `latestObservedAt` is the thing to watch: it should
+advance every ~15s. If it stops advancing while the process still shows
+`online` in `pm2 list`, ingestion is silently stuck (e.g. every poll
+hitting a persistent upstream error) — check
+`pm2 logs vltrade-trades-poller --lines 50 --nostream` for repeated
+`[trade-poller] iteration failed, continuing: ...` lines, which is the
+one failure mode this process is explicitly designed to survive rather
+than crash on.
+
+Logs also live on disk at
+`/root/vl-trade/logs/{backend,frontend,trades-poller}.{out,err}.log`
 (rotated by the VPS-wide `pm2-logrotate` module already installed —
 nothing project-specific to configure).
 
@@ -425,7 +455,7 @@ git pull origin main
 npm install                           # pick up any new/updated dependencies
 npm run db:migrate                    # idempotent — safe even with no new migrations
 npm run frontend:build                # next build src/frontend — required before restarting the frontend
-pm2 restart vltrade-backend vltrade-frontend
+pm2 restart vltrade-backend vltrade-frontend vltrade-trades-poller
 pm2 save
 ```
 
@@ -434,10 +464,15 @@ update includes code changes you haven't already verified — same
 pre-deploy gate every phase of this project has used locally.
 
 There is no separate "bootstrap ingestion" step in a routine update —
-that only runs once, at initial deployment (§13.5). Ongoing data
-freshness is a known gap (see §8, "no persistent ingestion scheduler
-yet") — the deployed backend currently only serves whatever was last
-ingested, the same limitation local dev has always had.
+that one-time bootstrap (§13.5) only mattered before continuous
+ingestion existed. As of Phase 6.1, `vltrade-trades-poller` keeps
+`trades` continuously fresh on its own (§13.1/§13.2) — restarting it as
+part of a routine update is safe (it's stateless between polls; a brief
+gap in polling during the restart is closed by the next poll's window,
+same as any other short `/trades` outage `docs/rest-api-validation.md`
+already found this endpoint tolerates). `/history`/`/positions`/
+`/profiles`/leaderboard data is still only as fresh as the last manually-run
+bounded job — that part of the "known gap" still applies.
 
 ### 13.4 Rollback procedure
 
@@ -447,7 +482,7 @@ git log --oneline -10                 # find the last known-good commit
 git checkout <known-good-commit-or-tag>
 npm install
 npm run frontend:build
-pm2 restart vltrade-backend vltrade-frontend
+pm2 restart vltrade-backend vltrade-frontend vltrade-trades-poller
 pm2 save
 git checkout main                     # return the working tree to the branch tip once stable
 ```
@@ -466,7 +501,7 @@ To roll back nginx or PM2 configuration itself (not application code):
 nginx -t && systemctl reload nginx    # -t validates BEFORE reloading — never reload on a failed test
 
 # PM2: ecosystem.config.cjs is version-controlled; after editing/reverting it
-pm2 delete vltrade-backend vltrade-frontend
+pm2 delete vltrade-backend vltrade-frontend vltrade-trades-poller
 pm2 start ecosystem.config.cjs
 pm2 save
 ```
@@ -489,7 +524,13 @@ sudo -u postgres psql -c "CREATE DATABASE vltrade OWNER vltrade;"
 npm install
 npm run db:migrate
 
-# One-time data bootstrap — never re-run automatically, no forever loop
+# One-time bootstrap for everything ingestion doesn't yet run continuously
+# for (rankings/positions/history/scores/signals — still bounded, manual
+# jobs as of Phase 6.1). `ingest:trades:once` here is now optional/
+# redundant, not required: `pm2 start ecosystem.config.cjs` below starts
+# `vltrade-trades-poller`, which does its own first `/trades` fetch
+# within 15s of starting regardless. Kept here anyway so `trades` isn't
+# empty for the few seconds before the poller's first iteration.
 npm run ingest:trades:once
 npm run ingest:rankings
 npm run ingest:positions:recent
@@ -498,7 +539,7 @@ npm run analytics:scores
 npm run analytics:signals:persist     # production thresholds — no demo overrides
 
 npm run frontend:build
-pm2 start ecosystem.config.cjs
+pm2 start ecosystem.config.cjs        # starts all three apps, including vltrade-trades-poller (Phase 6.1)
 pm2 save
 ```
 

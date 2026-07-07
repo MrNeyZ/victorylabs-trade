@@ -99,6 +99,24 @@ export async function getLatestTradeTimestamp(): Promise<Date | null> {
   return result.rows[0]?.upstream_timestamp ?? null;
 }
 
+/**
+ * Phase 6.1 — the continuous trades poller's own "did this actually
+ * write anything recently" signal. Deliberately `observed_at` (our own
+ * ingestion wall-clock), not `upstream_timestamp`
+ * (`getLatestTradeTimestamp` above, Jupiter's trade-execution time) — an
+ * all-duplicates poll leaves `observed_at` unchanged (nothing was
+ * written, per `ON CONFLICT DO NOTHING`), so this is the one number that
+ * actually goes stale if ingestion stops, which is exactly what a
+ * long-running poller's per-iteration log needs to report.
+ */
+export async function getLatestObservedAt(): Promise<Date | null> {
+  const pool = getPool();
+  const result = await pool.query<{ observed_at: Date }>(
+    'SELECT observed_at FROM trades ORDER BY observed_at DESC LIMIT 1',
+  );
+  return result.rows[0]?.observed_at ?? null;
+}
+
 export interface GetRecentActiveWalletsOptions {
   /** How far back to look, by our own ingestion wall-clock (`observed_at`), not upstream's trade timestamp. Default: 60. */
   sinceMinutes?: number;
